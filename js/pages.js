@@ -383,8 +383,9 @@ function closeCreateMarketModal() {
   }
 }
 
-function submitCreateMarket() {
+async function submitCreateMarket() {
   const question = document.getElementById('mkt-question').value.trim();
+  const description = document.getElementById('mkt-description')?.value.trim() || '';
   const category = document.getElementById('mkt-category').value;
   const optA = document.getElementById('mkt-option-a').value.trim() || 'Yes';
   const optB = document.getElementById('mkt-option-b').value.trim() || 'No';
@@ -426,21 +427,49 @@ function submitCreateMarket() {
     crypto: '₿ Crypto'
   };
   
+  const marketId = Date.now();
+  
   // Create new market
   const newMarket = {
-    id: Date.now(),
+    id: marketId,
     question: question,
+    description: description,
     cat: catEmojis[category] || '🔮 Other',
+    category: category,
     optA: optA,
     optB: optB,
     pctA: 50,
     tokens: 100,
     ends: new Date(endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    endDate: endDate,
     status: 'pending',
-    createdBy: State.currentUser?.uid || 'demo'
+    createdBy: State.currentUser?.uid || 'demo',
+    createdByName: State.currentUser?.displayName || State.currentUser?.email?.split('@')[0] || 'Anonymous',
+    createdByEmail: State.currentUser?.email || '',
+    createdAt: Date.now()
   };
   
   State.userCreatedMarkets.push(newMarket);
+  
+  // Save to Firebase if connected (for admin panel)
+  if (!demoMode && typeof db !== 'undefined' && db) {
+    try {
+      await db.collection('markets').doc(String(marketId)).set({
+        ...newMarket,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      console.log('Market saved to Firebase for admin review');
+    } catch (e) {
+      console.warn('Failed to save market to Firebase:', e);
+    }
+    
+    // Also save user data
+    try {
+      await saveUserData();
+    } catch (e) {
+      console.warn('Failed to save user data:', e);
+    }
+  }
   
   closeCreateMarketModal();
   

@@ -86,6 +86,7 @@ function buildFooter() {
         <div class="footer-brand">
           <img src="assets/logo.jpg" alt="CrowdVerse">
           <span class="footer-brand-name">Crowd<span class="accent">Verse</span></span>
+          <a href="admin.html" class="admin-link" title="Admin Panel">⚙️</a>
         </div>
         <div class="footer-disclaimer">
           <strong>⚠️ Important Disclaimer:</strong> CrowdVerse is a skill-based prediction and

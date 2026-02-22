@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel — CrowdVerse</title>
+  <link rel="icon" type="image/png" href="assets/logo.jpg">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Manrope:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/navbar.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/pages.css">
+  <link rel="stylesheet" href="css/modal.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <link rel="stylesheet" href="css/admin.css">
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body class="admin-body">
+
+  <!-- ─── LOGIN SCREEN ─── -->
+  <div id="admin-login-screen" class="admin-login-screen">
+    <div class="admin-login-box">
+      <div class="admin-logo">
+        <img src="assets/logo.jpg" alt="CrowdVerse" class="admin-logo-img">
+        <span class="admin-logo-text">Crowd<span class="accent">Verse</span></span>
+      </div>
+      <h2>Admin Panel</h2>
+      <p class="admin-login-subtitle">Restricted Access — Authorized Personnel Only</p>
+      
+      <div class="admin-error" id="admin-error"></div>
+      
+      <div class="form-group">
+        <label class="form-label">Admin Email</label>
+        <input class="form-input" id="admin-email" type="email" placeholder="admin@crowdverse.in" value="founder@crowdverse.in">
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" id="admin-password" type="password" placeholder="Enter admin password">
+      </div>
+      
+      <button class="btn btn-primary w-full" onclick="handleAdminLogin()">
+        Sign In to Admin Panel
+      </button>
+      
+      <a href="index.html" class="admin-back-link">← Back to CrowdVerse</a>
+    </div>
+  </div>
+
+  <!-- ─── ADMIN DASHBOARD ─── -->
+  <div id="admin-dashboard" class="admin-dashboard hidden">
+    <!-- Admin Header -->
+    <header class="admin-header">
+      <div class="admin-header-left">
+        <img src="assets/logo.jpg" alt="Logo" class="admin-header-logo">
+        <span class="admin-header-title">Admin Panel</span>
+      </div>
+      <div class="admin-header-right">
+        <span class="admin-user-badge">
+          <span class="admin-role">ADMIN</span>
+          <span id="admin-user-email">founder@crowdverse.in</span>
+        </span>
+        <button class="btn btn-ghost btn-sm" onclick="handleAdminLogout()">Logout</button>
+      </div>
+    </header>
+
+    <!-- Admin Navigation -->
+    <nav class="admin-nav">
+      <button class="admin-nav-tab active" data-tab="overview" onclick="switchAdminTab('overview')">
+        <span class="admin-nav-icon">📊</span>
+        Overview
+      </button>
+      <button class="admin-nav-tab" data-tab="tokens" onclick="switchAdminTab('tokens')">
+        <span class="admin-nav-icon">🎟️</span>
+        Tokens in Flow
+      </button>
+      <button class="admin-nav-tab" data-tab="accounts" onclick="switchAdminTab('accounts')">
+        <span class="admin-nav-icon">👥</span>
+        Accounts
+      </button>
+      <button class="admin-nav-tab" data-tab="markets" onclick="switchAdminTab('markets')">
+        <span class="admin-nav-icon">📈</span>
+        Markets Review
+        <span class="admin-badge" id="pending-markets-badge">0</span>
+      </button>
+    </nav>
+
+    <!-- Admin Content -->
+    <main class="admin-main">
+      <!-- OVERVIEW TAB -->
+      <div id="tab-overview" class="admin-tab active">
+        <div class="admin-section-header">
+          <h2>Platform Overview</h2>
+          <p class="admin-section-desc">Real-time metrics and platform health</p>
+        </div>
+        
+        <div class="admin-stats-grid">
+          <div class="admin-stat-card">
+            <div class="admin-stat-icon">👤</div>
+            <div class="admin-stat-value" id="overview-total-users">—</div>
+            <div class="admin-stat-label">Total Users</div>
+          </div>
+          <div class="admin-stat-card">
+            <div class="admin-stat-icon">🎟️</div>
+            <div class="admin-stat-value" id="overview-total-tokens">—</div>
+            <div class="admin-stat-label">Total Tokens in Circulation</div>
+          </div>
+          <div class="admin-stat-card">
+            <div class="admin-stat-icon">📈</div>
+            <div class="admin-stat-value" id="overview-live-markets">—</div>
+            <div class="admin-stat-label">Live Markets</div>
+          </div>
+          <div class="admin-stat-card highlight">
+            <div class="admin-stat-icon">⏳</div>
+            <div class="admin-stat-value" id="overview-pending-markets">—</div>
+            <div class="admin-stat-label">Pending Review</div>
+          </div>
+        </div>
+
+        <div class="admin-recent-activity">
+          <h3>Recent Activity</h3>
+          <div id="recent-activity-list" class="admin-activity-list">
+            <p class="admin-empty">Loading activity...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- TOKENS TAB -->
+      <div id="tab-tokens" class="admin-tab">
+        <div class="admin-section-header">
+          <h2>Tokens in Flow</h2>
+          <p class="admin-section-desc">Track all token movements across the platform</p>
+        </div>
+
+        <div class="admin-tokens-summary">
+          <div class="admin-token-metric">
+            <span class="admin-token-label">Total Tokens Created</span>
+            <span class="admin-token-value" id="tokens-created">—</span>
+          </div>
+          <div class="admin-token-metric">
+            <span class="admin-token-label">Tokens in User Wallets</span>
+            <span class="admin-token-value" id="tokens-in-wallets">—</span>
+          </div>
+          <div class="admin-token-metric">
+            <span class="admin-token-label">Tokens in Markets</span>
+            <span class="admin-token-value" id="tokens-in-markets">—</span>
+          </div>
+          <div class="admin-token-metric">
+            <span class="admin-token-label">Tokens Refunded (Rejected Markets)</span>
+            <span class="admin-token-value" id="tokens-refunded">—</span>
+          </div>
+        </div>
+
+        <div class="admin-table-container">
+          <h3>Recent Token Transactions</h3>
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Action</th>
+                <th>Amount</th>
+                <th>Details</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="tokens-table-body">
+              <tr><td colspan="5" class="admin-loading">Loading transactions...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ACCOUNTS TAB -->
+      <div id="tab-accounts" class="admin-tab">
+        <div class="admin-section-header">
+          <h2>User Accounts</h2>
+          <p class="admin-section-desc">View and manage all registered users</p>
+        </div>
+
+        <div class="admin-search-bar">
+          <input type="text" id="accounts-search" class="form-input" placeholder="Search by email or display name..." onkeyup="searchAccounts()">
+          <span class="admin-search-icon">🔍</span>
+        </div>
+
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Email</th>
+                <th>Tokens</th>
+                <th>Predictions</th>
+                <th>Joined</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="accounts-table-body">
+              <tr><td colspan="6" class="admin-loading">Loading accounts...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MARKETS REVIEW TAB -->
+      <div id="tab-markets" class="admin-tab">
+        <div class="admin-section-header">
+          <h2>Markets Review</h2>
+          <p class="admin-section-desc">Approve or reject user-created prediction markets</p>
+        </div>
+
+        <div class="admin-markets-filters">
+          <button class="admin-filter-btn active" data-filter="pending" onclick="filterMarkets('pending')">⏳ Pending</button>
+          <button class="admin-filter-btn" data-filter="approved" onclick="filterMarkets('approved')">✅ Approved</button>
+          <button class="admin-filter-btn" data-filter="rejected" onclick="filterMarkets('rejected')">❌ Rejected</button>
+          <button class="admin-filter-btn" data-filter="all" onclick="filterMarkets('all')">📋 All Markets</button>
+        </div>
+
+        <div id="markets-review-list" class="admin-markets-list">
+          <p class="admin-loading">Loading markets...</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ─── REJECTION MODAL ─── -->
+  <div class="modal-overlay" id="rejection-modal">
+    <div class="modal" style="max-width:480px;">
+      <button class="modal-close" onclick="closeRejectionModal()">✕</button>
+      <h3 style="margin-bottom:0.5rem;">❌ Reject Market</h3>
+      <p style="color:var(--white2);margin-bottom:1.5rem;">
+        You are about to reject a market. <strong style="color:var(--red);">100 tokens will be refunded</strong> to the creator with an apology message.
+      </p>
+      
+      <div class="form-group">
+        <label class="form-label">Rejection Reason (User will see this)</label>
+        <select class="form-select" id="rejection-reason" onchange="toggleCustomReason()">
+          <option value="inappropriate">Inappropriate content</option>
+          <option value="unclear">Question is unclear or ambiguous</option>
+          <option value="impossible">Outcome cannot be verified</option>
+          <option value="duplicate">Duplicate of existing market</option>
+          <option value="spam">Spam or low-quality submission</option>
+          <option value="other">Other (specify below)</option>
+        </select>
+      </div>
+      
+      <div class="form-group" id="custom-reason-group" style="display:none;">
+        <label class="form-label">Custom Reason</label>
+        <textarea class="form-input" id="custom-rejection-reason" rows="3" placeholder="Explain why this market was rejected..."></textarea>
+      </div>
+
+      <div class="admin-apology-preview">
+        <h4>Apology Message Preview:</h4>
+        <div class="admin-message-preview" id="apology-preview">
+          "We're sorry, but your market could not be approved. Your 100 tokens have been refunded."
+        </div>
+      </div>
+      
+      <div class="admin-modal-actions">
+        <button class="btn btn-ghost" onclick="closeRejectionModal()">Cancel</button>
+        <button class="btn btn-danger" onclick="confirmRejectMarket()">
+          Reject & Refund 100 Tokens
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── TOAST ─── -->
+  <div class="toast admin-toast" id="admin-toast"></div>
+
+  <!-- ─── SCRIPTS ─── -->
+  <script src="js/config.js"></script>
+  <script src="js/admin.js"></script>
+
+</body>
+</html>
