@@ -117,6 +117,20 @@ function buildAdminPage() {
           </div>
         </div>
 
+        <!-- ── Live markets (with VETO delete) ───────────────────── -->
+        <div style="margin-bottom:3rem;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:1rem;">
+            <div class="section-label" style="margin-bottom:0;color:var(--green);">✅ Live Markets</div>
+            <span style="font-family:var(--font-mono);font-size:0.7rem;color:var(--white3);">
+              🛡️ Admin VETO power available
+            </span>
+          </div>
+          <div id="admin-live-list">
+            <div style="text-align:center;padding:3rem;font-family:var(--font-mono);
+                        font-size:0.82rem;color:var(--white3);">Loading…</div>
+          </div>
+        </div>
+
         <!-- ── Accounts table ─────────────────────────────────────── -->
         <div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:1rem;">
@@ -175,7 +189,7 @@ async function loadAdminData() {
   }
 
   // Show "loading…" while we fetch
-  ['admin-pending-list', 'admin-accounts-list'].forEach(id => {
+  ['admin-pending-list', 'admin-live-list', 'admin-accounts-list'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = `<div style="text-align:center;padding:3rem;font-family:var(--font-mono);font-size:0.82rem;color:var(--white3);">Loading…</div>`;
   });
@@ -197,12 +211,14 @@ async function loadAdminData() {
     // ── Fetch markets ────────────────────────────────────────────────
     const marketsSnap = await db.collection('markets').orderBy('createdAt', 'desc').get();
     const pendingMarkets = [];
+    const liveMarkets = [];
     _adminMarketsCache = {};
 
     marketsSnap.forEach(doc => {
       const d = { docId: doc.id, ...doc.data() };
       _adminMarketsCache[doc.id] = d;
       if (d.status === 'pending') pendingMarkets.push(d);
+      else if (d.status === 'live' || d.status === 'approved') liveMarkets.push(d);
     });
 
     // ── Update stat cards ────────────────────────────────────────────
@@ -212,6 +228,7 @@ async function loadAdminData() {
     document.getElementById('admin-stat-predictions').textContent = totalPredictions.toLocaleString();
 
     _renderAdminPendingMarkets(pendingMarkets);
+    _renderAdminLiveMarkets(liveMarkets);
     _renderAdminAccounts(users);
 
   } catch (e) {
@@ -304,6 +321,90 @@ function _renderAdminPendingMarkets(markets) {
                          font-weight:700;font-size:0.85rem;cursor:pointer;transition:all 0.2s;
                          font-family:var(--font-mono);letter-spacing:0.02em;white-space:nowrap;">
             ❌ Reject
+          </button>
+        </div>
+
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Render live markets with VETO delete option ───────────────────────
+function _renderAdminLiveMarkets(markets) {
+  const el = document.getElementById('admin-live-list');
+  if (!el) return;
+
+  if (markets.length === 0) {
+    el.innerHTML = `
+      <div style="text-align:center;padding:3rem;background:var(--off-black);
+                  border:1px solid var(--border);border-radius:var(--radius-md);">
+        <div style="font-size:2.5rem;margin-bottom:0.75rem">📊</div>
+        <p style="font-family:var(--font-mono);color:var(--white3);font-size:0.85rem;">
+          No live markets currently.
+        </p>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = markets.map(m => `
+    <div id="admin-live-mkt-${m.docId}"
+         style="background:var(--off-black);border:1px solid rgba(0,255,127,0.22);
+                border-radius:var(--radius-md);padding:1.5rem;margin-bottom:1rem;
+                transition:all 0.35s ease;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;
+                  gap:1rem;flex-wrap:wrap;">
+
+        <!-- Left: market details -->
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:0.65rem;margin-bottom:0.75rem;flex-wrap:wrap;">
+            <span style="font-family:var(--font-mono);font-size:0.65rem;
+                         background:rgba(0,255,127,0.1);border:1px solid rgba(0,255,127,0.3);
+                         color:var(--green);padding:0.2rem 0.55rem;border-radius:4px;
+                         text-transform:uppercase;letter-spacing:0.06em;">● LIVE</span>
+            <span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--green);">
+              ${escHtml(m.cat || '🔮 Other')}
+            </span>
+          </div>
+
+          <h3 style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;
+                     margin-bottom:0.6rem;line-height:1.4;">
+            ${escHtml(m.question)}
+          </h3>
+
+          ${m.description
+            ? `<p style="font-size:0.85rem;color:var(--white2);margin-bottom:0.75rem;line-height:1.55;">
+                 ${escHtml(m.description)}
+               </p>`
+            : ''}
+
+          <div style="display:flex;gap:1.5rem;flex-wrap:wrap;font-family:var(--font-mono);
+                      font-size:0.72rem;color:var(--white3);">
+            <span>👤 <strong style="color:var(--white2);">${escHtml(m.createdByName  || 'Unknown')}</strong></span>
+            <span>📧 <strong style="color:var(--white2);">${escHtml(m.createdByEmail || '—')}</strong></span>
+            <span>📅 Ends: <strong style="color:var(--white2);">${escHtml(m.ends || '—')}</strong></span>
+          </div>
+
+          <div style="margin-top:0.6rem;display:flex;gap:0.75rem;font-family:var(--font-mono);font-size:0.72rem;">
+            <span style="padding:0.25rem 0.6rem;background:rgba(127,255,127,0.08);
+                         border:1px solid rgba(127,255,127,0.2);border-radius:4px;color:var(--green);">
+              ✔ ${escHtml(m.optA || 'Yes')}
+            </span>
+            <span style="padding:0.25rem 0.6rem;background:rgba(255,85,85,0.08);
+                         border:1px solid rgba(255,85,85,0.2);border-radius:4px;color:#ff8888;">
+              ✖ ${escHtml(m.optB || 'No')}
+            </span>
+          </div>
+        </div>
+
+        <!-- Right: VETO delete button -->
+        <div style="display:flex;flex-direction:column;gap:0.6rem;flex-shrink:0;">
+          <button id="veto-btn-${m.docId}"
+                  onclick="deleteMarket('${m.docId}')"
+                  style="padding:0.7rem 1.35rem;background:rgba(255,85,85,0.15);color:#ff5555;
+                         border:2px solid #ff5555;border-radius:var(--radius-sm);
+                         font-weight:700;font-size:0.85rem;cursor:pointer;transition:all 0.2s;
+                         font-family:var(--font-mono);letter-spacing:0.02em;white-space:nowrap;">
+            🛡️ VETO DELETE
           </button>
         </div>
 

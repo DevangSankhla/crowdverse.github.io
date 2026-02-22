@@ -69,10 +69,14 @@ async function loadAndRenderMarkets() {
 
 // ── Render all markets on the Markets page ────────────────────────────
 function renderMarkets() {
+  // Filter out rejected markets - they should never be shown
+  const firestoreMarkets = (State.firestoreMarkets || []).filter(m => m.status !== 'rejected');
+  const userMarkets = State.userCreatedMarkets.filter(m => m.status !== 'rejected');
+  
   const allMarkets = [
     ...SAMPLE_MARKETS,
-    ...(State.firestoreMarkets || []),
-    ...State.userCreatedMarkets
+    ...firestoreMarkets,
+    ...userMarkets
   ];
   
   // Sort by creation/approval date - newest first
