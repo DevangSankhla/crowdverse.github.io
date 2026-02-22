@@ -376,118 +376,101 @@ function closeCreateMarketModal() {
   const modal = document.getElementById('create-market-modal');
   if (modal) {
     modal.classList.remove('active');
+    modal.style.display = 'none';
     setTimeout(() => {
-      modal.style.display = 'none';
       if (modal.parentNode) modal.remove();
-    }, 300); // wait for opacity transition to finish
+    }, 300);
   }
 }
 
 async function submitCreateMarket() {
   const question = document.getElementById('mkt-question').value.trim();
-  const description = document.getElementById('mkt-description')?.value.trim() || '';
   const category = document.getElementById('mkt-category').value;
-  const optA = document.getElementById('mkt-option-a').value.trim() || 'Yes';
-  const optB = document.getElementById('mkt-option-b').value.trim() || 'No';
-  const endDate = document.getElementById('mkt-enddate').value;
-  
+  const optA     = document.getElementById('mkt-option-a').value.trim() || 'Yes';
+  const optB     = document.getElementById('mkt-option-b').value.trim() || 'No';
+  const endDate  = document.getElementById('mkt-enddate').value;
+  const description = (document.getElementById('mkt-description')?.value || '').trim();
+  const submitBtn = document.querySelector('#create-market-modal .btn-primary');
+
   // Validation
-  if (!question) {
-    showToast('Please enter a market question', 'yellow');
-    return;
-  }
-  
-  if (question.length < 10) {
-    showToast('Question too short - be more descriptive', 'yellow');
-    return;
-  }
-  
-  if (!endDate) {
-    showToast('Please select an end date', 'yellow');
-    return;
-  }
-  
-  // Check tokens
+  if (!question) { showToast('Please enter a market question', 'yellow'); return; }
+  if (question.length < 10) { showToast('Question too short — be more descriptive', 'yellow'); return; }
+  if (!endDate)  { showToast('Please select an end date', 'yellow'); return; }
+
   if (State.userTokens < 100) {
     showToast('You need at least 100 tokens to create a market', 'red');
     return;
   }
-  
-  // Deduct tokens
-  State.userTokens -= 100;
-  updateTokenDisplay();
-  
+
   // Category emoji mapping
   const catEmojis = {
-    sports: '🏏 Sports',
-    economy: '📊 Economy',
-    entertainment: '🎬 Entertainment',
-    tech: '💻 Technology',
-    climate: '🌿 Climate',
-    crypto: '₿ Crypto'
+    sports: '🏏 Sports', economy: '📊 Economy',
+    entertainment: '🎬 Entertainment', tech: '💻 Technology',
+    climate: '🌿 Climate', crypto: '₿ Crypto'
   };
-  
-  const marketId = Date.now();
-  
-  // Create new market
+
   const newMarket = {
-    id: marketId,
-    question: question,
-    description: description,
-    cat: catEmojis[category] || '🔮 Other',
-    category: category,
-    optA: optA,
-    optB: optB,
-    pctA: 50,
-    tokens: 100,
-    ends: new Date(endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    endDate: endDate,
-    status: 'pending',
-    createdBy: State.currentUser?.uid || 'demo',
-    createdByName: State.currentUser?.displayName || State.currentUser?.email?.split('@')[0] || 'Anonymous',
+    id:             Date.now(),          // in-memory id
+    question:       question,
+    description:    description,
+    cat:            catEmojis[category] || '🔮 Other',
+    optA:           optA,
+    optB:           optB,
+    pctA:           50,
+    tokens:         100,
+    ends:           new Date(endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    status:         'pending',
+    createdBy:      State.currentUser?.uid || 'demo',
+    createdByUid:   State.currentUser?.uid || 'demo',
     createdByEmail: State.currentUser?.email || '',
-    createdAt: Date.now()
+    createdByName:  State.currentUser?.displayName || State.currentUser?.email?.split('@')[0] || 'User',
+    createdAt:      new Date().toISOString()
   };
-  
-  State.userCreatedMarkets.push(newMarket);
-  
-  // Save to Firebase if connected (for admin panel)
-  if (!demoMode && typeof db !== 'undefined' && db) {
+
+  // Deduct tokens first (optimistic)
+  State.userTokens -= 100;
+  updateTokenDisplay();
+
+  // Disable button while saving
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<span class="spinner"></span> Submitting…'; }
+
+  // Save to Firestore if connected
+  if (!demoMode && db) {
     try {
-      await db.collection('markets').doc(String(marketId)).set({
+      const docRef = await db.collection('markets').add({
         ...newMarket,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      console.log('Market saved to Firebase for admin review');
+      newMarket.firestoreId = docRef.id;
+
+      // Also deduct tokens in Firestore
+      await db.collection('users').doc(State.currentUser.uid).update({
+        tokens: firebase.firestore.FieldValue.increment(-100)
+      });
     } catch (e) {
-      console.warn('Failed to save market to Firebase:', e);
-    }
-    
-    // Also save user data
-    try {
-      await saveUserData();
-    } catch (e) {
-      console.warn('Failed to save user data:', e);
+      // Rollback optimistic deduction
+      State.userTokens += 100;
+      updateTokenDisplay();
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Create Market (100 tokens)'; }
+      showToast('Failed to submit market: ' + e.message, 'red');
+      return;
     }
   }
-  
+
+  State.userCreatedMarkets.push(newMarket);
+
   closeCreateMarketModal();
-  
-  // Toggle empty state vs list visibility
-  const listEl = document.getElementById('markets-list');
+
+  // Show/hide empty state
+  const listEl  = document.getElementById('markets-list');
   const emptyEl = document.getElementById('markets-empty-state');
-  
-  if (listEl) listEl.style.display = '';
+  if (listEl)  listEl.style.display  = '';
   if (emptyEl) emptyEl.style.display = 'none';
-  
-  // Re-render markets list
-  if (typeof renderMarkets === 'function') {
-    renderMarkets();
-  }
-  
-  // Show success
+
+  if (typeof renderMarkets === 'function') renderMarkets();
+
   setTimeout(() => {
-    showToast('Market created! Pending admin review ✅', 'green');
+    showToast('Market submitted for admin review! ✅', 'green');
   }, 400);
 }
 // ── REWARDS PAGE ─────────────────────────────────────────────────────
