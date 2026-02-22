@@ -376,10 +376,10 @@ function closeCreateMarketModal() {
   const modal = document.getElementById('create-market-modal');
   if (modal) {
     modal.classList.remove('active');
-    modal.style.display = 'none';
     setTimeout(() => {
+      modal.style.display = 'none';
       if (modal.parentNode) modal.remove();
-    }, 300);
+    }, 300); // wait for opacity transition to finish
   }
 }
 
