@@ -4,9 +4,19 @@
 
 /**
  * Navigate to a named page.
- * @param {string} id — 'home' | 'community' | 'markets' | 'rewards' | 'profile'
+ * @param {string} id — 'home' | 'community' | 'markets' | 'rewards' | 'profile' | 'admin'
  */
 function showPage(id) {
+  // Admin page is secret — only accessible if admin
+  if (id === 'admin' && !isAdmin()) {
+    if (!State.currentUser) {
+      openAuth();
+      return;
+    }
+    showToast('⛔ Admin access only.', 'red');
+    return;
+  }
+
   // Deactivate all pages & nav links
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
@@ -22,8 +32,9 @@ function showPage(id) {
   window.scrollTo({ top: 0, behavior: 'instant' });
 
   // Page-specific re-render
-  if (id === 'markets') renderMarkets();
-  if (id === 'profile') renderProfile();
+  if (id === 'markets') loadAndRenderMarkets();
+  if (id === 'profile')  renderProfile();
+  if (id === 'admin')    renderAdminPage();
 }
 
 // ── Bootstrap ─────────────────────────────────────────────────────────
@@ -34,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
   buildMarketsPage();
   buildRewardsPage();
   buildProfilePage();
+  buildAdminPage();
 
   // Wire up modal backdrop closes
   initModalBackdropClose();
