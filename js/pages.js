@@ -197,7 +197,7 @@ function buildCommunityPage() {
     <!-- Polls grid -->
     <div style="max-width:1100px;margin:0 auto;padding:0 2rem;">
       <div class="market-cards">
-        ${SAMPLE_MARKETS.map(m => {
+        ${SAMPLE_MARKETS.slice(0, 3).map(m => {
           const pctB = 100 - m.pctA;
           const marketId = m.firestoreId || m.id;
           return `

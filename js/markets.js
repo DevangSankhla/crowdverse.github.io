@@ -74,6 +74,23 @@ function renderMarkets() {
     ...(State.firestoreMarkets || []),
     ...State.userCreatedMarkets
   ];
+  
+  // Sort by creation/approval date - newest first
+  allMarkets.sort((a, b) => {
+    const getTime = (m) => {
+      // Try approvedAt first (for admin-approved markets)
+      if (m.approvedAt?.seconds) return m.approvedAt.seconds * 1000;
+      if (m.approvedAt?.toMillis) return m.approvedAt.toMillis();
+      // Then try createdAt
+      if (m.createdAt?.seconds) return m.createdAt.seconds * 1000;
+      if (m.createdAt?.toMillis) return m.createdAt.toMillis();
+      // Fallback to parsing ISO strings or use a default old timestamp
+      const parsed = new Date(m.createdAt || m.approvedAt || '2020-01-01').getTime();
+      return isNaN(parsed) ? 0 : parsed;
+    };
+    return getTime(b) - getTime(a);
+  });
+  
   const list = document.getElementById('markets-list');
   if (!list) return;
   
