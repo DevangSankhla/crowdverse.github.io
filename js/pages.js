@@ -15,7 +15,8 @@ function buildHomePage() {
         entertainment. Earn tokens, climb leaderboards, and see how your predictions
         compare to thousands of others.
       </p>
-      <div class="hero-actions">
+      <div class="hero-actions" id="hero-cta-area">
+        <!-- Updated dynamically by updateHeroCta() -->
         <button class="btn btn-primary btn-lg" onclick="openAuth()">
           Get 1000 Free Tokens →
         </button>
@@ -95,32 +96,30 @@ function buildHomePage() {
       </div>
     </div>
 
-    <!-- Sample Markets -->
+    <!-- Sample Markets Preview -->
     <div class="section" style="padding-top:0">
       <div class="section-label">Live Markets</div>
       <h2>What's The Crowd Saying?</h2>
       <div class="market-cards">
         ${SAMPLE_MARKETS.slice(0, 3).map(m => {
           const pctB = 100 - m.pctA;
-          const marketId = m.firestoreId || m.id;
+          const marketId = String(m.firestoreId || m.id);
           return `
-          <div class="market-card" data-market-id="${marketId}" onclick="if(event.target.closest('.share-btn')) return; if(State.currentUser){openVote(${m.id},null,event)}else{openAuth()}">
+          <div class="market-card" data-market-id="${marketId}"
+               onclick="if(event.target.closest('.share-btn')) return; if(State.currentUser){openVote('${marketId}',null,event)}else{openAuth()}">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
               <div class="market-cat">${escHtml(m.cat)}</div>
-              <button class="share-btn" onclick="shareMarket('${marketId}', '${escHtml(m.question).replace(/'/g, "\\'")}', 'community')" 
+              <button class="share-btn"
+                      onclick="event.stopPropagation();shareMarket('${marketId}','${escHtml(m.question).replace(/'/g,"\\'")}','markets')"
                       style="background:var(--white1);border:none;border-radius:50%;width:32px;height:32px;
                              cursor:pointer;display:flex;align-items:center;justify-content:center;
-                             transition:all 0.2s;font-size:0.9rem;z-index:10;" 
-                      title="Copy link to this prediction"
-                      onmouseover="this.style.background='var(--green)';this.style.transform='scale(1.1)';"
-                      onmouseout="this.style.background='var(--white1)';this.style.transform='scale(1)';">
-                🔗
-              </button>
+                             transition:all 0.2s;font-size:0.9rem;"
+                      title="Share this prediction"
+                      onmouseover="this.style.background='var(--green)'"
+                      onmouseout="this.style.background='var(--white1)'">🔗</button>
             </div>
             <h3>${escHtml(m.question)}</h3>
-            <div class="odds-bar">
-              <div class="odds-fill" style="width:${m.pctA}%"></div>
-            </div>
+            <div class="odds-bar"><div class="odds-fill" style="width:${m.pctA}%"></div></div>
             <div class="odds-labels">
               <span>${escHtml(m.optA)} ${m.pctA}%</span>
               <span>${escHtml(m.optB)} ${pctB}%</span>
@@ -129,9 +128,11 @@ function buildHomePage() {
               <span>Ends: ${m.ends}</span>
               <span class="vol">${m.tokens.toLocaleString()} tokens pooled</span>
             </div>
-          </div>
-          `;
+          </div>`;
         }).join('')}
+      </div>
+      <div style="text-align:center;margin-top:2rem;">
+        <button class="btn btn-ghost btn-lg" onclick="showPage('markets')">View All Markets →</button>
       </div>
     </div>
 
@@ -142,8 +143,7 @@ function buildHomePage() {
       <p style="color:var(--white2);margin-bottom:1.5rem;max-width:620px;line-height:1.7;">
         During our launch phase, every user receives
         <strong style="color:var(--green)">200 free tokens every week</strong> — no payment
-        needed. When we go live with full rewards, we'll introduce optional subscriptions for
-        larger token bundles. You'll always keep a free weekly allocation.
+        needed.
       </p>
       <div class="legal-banner">
         <div class="icon">🔒</div>
@@ -160,19 +160,46 @@ function buildHomePage() {
   `;
 }
 
+// ── Update hero CTA based on auth state ──────────────────────────────
+function updateHeroCta() {
+  const area = document.getElementById('hero-cta-area');
+  if (!area) return;
+  if (State.currentUser) {
+    const name = State.currentUser.displayName
+      || State.currentUser.email?.split('@')[0]
+      || 'Predictor';
+    area.innerHTML = `
+      <button class="btn btn-primary btn-lg" onclick="showPage('markets')">
+        Browse Live Markets →
+      </button>
+      <button class="btn btn-ghost btn-lg" onclick="showPage('profile')">
+        My Profile (${State.userTokens.toLocaleString()} tokens)
+      </button>
+    `;
+  } else {
+    area.innerHTML = `
+      <button class="btn btn-primary btn-lg" onclick="openAuth()">
+        Get 1000 Free Tokens →
+      </button>
+      <button class="btn btn-ghost btn-lg" onclick="showPage('markets')">
+        Explore Markets
+      </button>
+    `;
+  }
+}
+
 // ── COMMUNITY PAGE ────────────────────────────────────────────────────
 function buildCommunityPage() {
   const totalParticipants = SAMPLE_MARKETS.reduce((acc, m) => acc + Math.floor(m.tokens / 50), 0);
   const totalVolume = SAMPLE_MARKETS.reduce((acc, m) => acc + m.tokens, 0);
-  
+
   document.getElementById('page-community').innerHTML = `
     <div class="page-header">
       <div class="section-label" style="margin-bottom:0.5rem">Community Polls</div>
       <h1>Community Predictions</h1>
-      <p>Join the crowd. Predict on trending topics and earn tokens.</p>
+      <p>Trending topics the crowd is talking about. Join in and stake your tokens.</p>
     </div>
-    
-    <!-- Stats bar -->
+
     <div style="max-width:1100px;margin:0 auto 2rem;padding:0 2rem;">
       <div class="stats-strip" style="margin:0;">
         <div class="stat-item">
@@ -188,36 +215,34 @@ function buildCommunityPage() {
           <span class="stat-label">Participants</span>
         </div>
         <div class="stat-item">
-          <span class="stat-num">${State.userTokens || 1000}</span>
+          <span class="stat-num" id="community-token-count">${State.userTokens || '—'}</span>
           <span class="stat-label">Your Tokens</span>
         </div>
       </div>
     </div>
-    
-    <!-- Polls grid -->
+
+    <!-- Community polls grid — SAMPLE_MARKETS only, NOT user-created markets -->
     <div style="max-width:1100px;margin:0 auto;padding:0 2rem;">
       <div class="market-cards">
-        ${SAMPLE_MARKETS.slice(0, 3).map(m => {
+        ${SAMPLE_MARKETS.map(m => {
           const pctB = 100 - m.pctA;
-          const marketId = m.firestoreId || m.id;
+          const marketId = String(m.firestoreId || m.id);
           return `
-          <div class="market-card" data-market-id="${marketId}" onclick="if(event.target.closest('.share-btn')) return; openVote(${m.id}, null, event)">
+          <div class="market-card" data-market-id="${marketId}"
+               onclick="if(event.target.closest('.share-btn')) return; if(State.currentUser){openVote('${marketId}',null,event)}else{openAuth()}">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
               <div class="market-cat">${escHtml(m.cat)}</div>
-              <button class="share-btn" onclick="shareMarket('${marketId}', '${escHtml(m.question).replace(/'/g, "\\'")}', 'community')" 
+              <button class="share-btn"
+                      onclick="event.stopPropagation();shareMarket('${marketId}','${escHtml(m.question).replace(/'/g,"\\'")}','community')"
                       style="background:var(--white1);border:none;border-radius:50%;width:32px;height:32px;
                              cursor:pointer;display:flex;align-items:center;justify-content:center;
-                             transition:all 0.2s;font-size:0.9rem;" 
-                      title="Share this prediction"
-                      onmouseover="this.style.background='var(--green)';this.style.transform='scale(1.1)';"
-                      onmouseout="this.style.background='var(--white1)';this.style.transform='scale(1)';">
-                🔗
-              </button>
+                             transition:all 0.2s;font-size:0.9rem;"
+                      title="Share"
+                      onmouseover="this.style.background='var(--green)'"
+                      onmouseout="this.style.background='var(--white1)'">🔗</button>
             </div>
             <h3>${escHtml(m.question)}</h3>
-            <div class="odds-bar">
-              <div class="odds-fill" style="width:${m.pctA}%"></div>
-            </div>
+            <div class="odds-bar"><div class="odds-fill" style="width:${m.pctA}%"></div></div>
             <div class="odds-labels">
               <span>${escHtml(m.optA)} ${m.pctA}%</span>
               <span>${escHtml(m.optB)} ${pctB}%</span>
@@ -226,173 +251,173 @@ function buildCommunityPage() {
               <span>Ends: ${m.ends}</span>
               <span class="vol">${m.tokens.toLocaleString()} tokens pooled</span>
             </div>
-          </div>
-          `;
+          </div>`;
         }).join('')}
       </div>
     </div>
-    
-    <!-- Create your own CTA -->
+
+    <!-- CTA to Markets page -->
     <div style="max-width:1100px;margin:3rem auto;padding:0 2rem;">
-      <div class="legal-banner" style="background:linear-gradient(135deg, rgba(0,255,127,0.1), rgba(0,255,127,0.05));border-color:var(--green);">
+      <div class="legal-banner" style="background:linear-gradient(135deg,rgba(0,255,127,0.1),rgba(0,255,127,0.05));border-color:var(--green);">
         <div class="icon">💡</div>
         <div>
-          <p style="margin-bottom:0.5rem;"><strong>Want to Create Your Own Poll?</strong></p>
-          <p style="margin-bottom:1rem;">Head over to the Markets page to create your own prediction panels and invite others to predict.</p>
-          <button class="btn btn-primary" onclick="showPage('markets')">Create Your Market →</button>
+          <p style="margin-bottom:0.5rem;"><strong>Want to create your own prediction?</strong></p>
+          <p style="margin-bottom:1rem;">Head to the Markets page to submit your own question and invite the crowd to predict.</p>
+          <button class="btn btn-primary" onclick="showPage('markets')">Go to Markets →</button>
         </div>
       </div>
     </div>
-    
+
     ${buildFooter()}
   `;
 }
 
 // ── MARKETS PAGE ─────────────────────────────────────────────────────
 function buildMarketsPage() {
-  renderMarketsPageContent();
-}
-
-function renderMarketsPageContent() {
-  const hasMarkets = State.userCreatedMarkets && State.userCreatedMarkets.length > 0;
-  
   document.getElementById('page-markets').innerHTML = `
     <div class="page-header">
-      <div class="section-label" style="margin-bottom:0.5rem">Your Markets</div>
-      <h1>Your Prediction Markets</h1>
-      <p>Create your own prediction markets and invite others to predict.</p>
+      <div class="section-label" style="margin-bottom:0.5rem">All Markets</div>
+      <h1>Prediction Markets</h1>
+      <p>Browse all live markets, or create your own for the community to predict on.</p>
     </div>
-    
+
     <!-- Info banner -->
     <div style="max-width:1100px;margin:1rem auto;padding:0 2rem;">
-      <div class="legal-banner" style="background:linear-gradient(135deg, rgba(0,255,127,0.1), rgba(0,255,127,0.05));border-color:var(--green);">
+      <div class="legal-banner" style="background:linear-gradient(135deg,rgba(0,255,127,0.1),rgba(0,255,127,0.05));border-color:var(--green);">
         <div class="icon">ℹ️</div>
         <p>
-          <strong>Create Your Own Predictions</strong><br>
-          This is your space to create prediction markets on any topic you are curious about. 
-          Set the question, define the outcomes, and let the community predict.
+          <strong>All live and pending markets.</strong> User-created markets go live after admin approval (24–48h).
+          It costs 100 tokens to submit a market.
         </p>
       </div>
     </div>
-    
-    <!-- Create button -->
-    <div style="max-width:1100px;margin:2rem auto;padding:0 2rem;text-align:center;">
-      <button class="btn btn-primary btn-lg" onclick="openCreateMarketModal()">
-        <span style="margin-right:0.5rem;">+</span> Create New Market
-      </button>
-    </div>
-    
-    <!-- Markets list (always present, may be empty) -->
+
+    <!-- Category filters + Create button -->
     <div style="max-width:1100px;margin:0 auto;padding:0 2rem;">
-      <div id="markets-list" class="markets-list" style="${hasMarkets ? '' : 'display:none'}"></div>
-      
-      <div id="markets-empty-state" class="coming-soon-wrap" style="padding:4rem 2rem;${hasMarkets ? 'display:none' : ''}">
-        <div class="coming-soon-badge" style="background:var(--green);color:var(--black);">📊</div>
-        <h2>No Markets Yet</h2>
-        <p style="max-width:500px;margin:0 auto 1.5rem;">
-          Create your first prediction market and start building your community of predictors. 
-          It is easy and only takes a minute.
-        </p>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.25rem;">
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;" id="market-filters">
+          <button class="mkt-filter-btn active" data-filter="all" onclick="applyMarketFilter('all')">All</button>
+          <button class="mkt-filter-btn" data-filter="sports" onclick="applyMarketFilter('sports')">🏏 Sports</button>
+          <button class="mkt-filter-btn" data-filter="economy" onclick="applyMarketFilter('economy')">📊 Economy</button>
+          <button class="mkt-filter-btn" data-filter="entertainment" onclick="applyMarketFilter('entertainment')">🎬 Entertainment</button>
+          <button class="mkt-filter-btn" data-filter="technology" onclick="applyMarketFilter('technology')">💻 Tech</button>
+          <button class="mkt-filter-btn" data-filter="crypto" onclick="applyMarketFilter('crypto')">₿ Crypto</button>
+          <button class="mkt-filter-btn" data-filter="climate" onclick="applyMarketFilter('climate')">🌿 Climate</button>
+        </div>
         <button class="btn btn-primary" onclick="openCreateMarketModal()">
-          Create Your First Market →
+          + Create Market
         </button>
       </div>
+
+      <!-- Markets list - always visible -->
+      <div id="markets-list" class="markets-list"></div>
+      <!-- Hidden empty state used only when filter returns no results -->
+      <div id="markets-empty-state" style="display:none;"></div>
     </div>
-    
+
     ${buildFooter()}
   `;
-  
-  // Render markets if any exist
-  if (hasMarkets && typeof renderMarkets === 'function') {
-    renderMarkets();
+
+  // Inject filter button styles
+  if (!document.getElementById('mkt-filter-styles')) {
+    const style = document.createElement('style');
+    style.id = 'mkt-filter-styles';
+    style.textContent = `
+      .mkt-filter-btn {
+        padding:0.5rem 1rem; background:var(--dark); border:1px solid var(--border2);
+        border-radius:var(--radius-sm); color:var(--white2); font-family:var(--font-mono);
+        font-size:0.75rem; cursor:pointer; transition:all 0.2s; white-space:nowrap;
+      }
+      .mkt-filter-btn:hover { background:var(--dark2); color:var(--white); }
+      .mkt-filter-btn.active { background:var(--green); border-color:var(--green); color:var(--black); font-weight:700; }
+    `;
+    document.head.appendChild(style);
   }
+
+  // Immediately render with seed data
+  if (typeof renderMarkets === 'function') renderMarkets();
+  // Then load from Firestore
+  if (typeof loadAndRenderMarkets === 'function') loadAndRenderMarkets();
+}
+
+let _currentMarketFilter = 'all';
+
+function applyMarketFilter(filter) {
+  _currentMarketFilter = filter;
+  document.querySelectorAll('.mkt-filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.filter === filter);
+  });
+  if (typeof renderMarkets === 'function') renderMarkets(filter);
 }
 
 // ── Create Market Modal ───────────────────────────────────────────────
 function openCreateMarketModal() {
-  // Check if logged in
-  if (!State.currentUser) {
-    openAuth();
-    return;
-  }
-  
-  // Set default end date to 3 months from today
+  if (!State.currentUser) { openAuth(); return; }
+
   const future = new Date();
   future.setMonth(future.getMonth() + 3);
   const defaultDate = future.toISOString().split('T')[0];
-  
-  // Remove existing modal if any
-  const existingModal = document.getElementById('create-market-modal');
-  if (existingModal) existingModal.remove();
-  
+
+  const existing = document.getElementById('create-market-modal');
+  if (existing) existing.remove();
+
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
   modal.id = 'create-market-modal';
   modal.innerHTML = `
     <div class="modal" style="max-width:500px;">
       <button class="modal-close" onclick="closeCreateMarketModal()">✕</button>
-      
       <h2 style="margin-bottom:0.5rem;">Create New Market</h2>
-      <p style="color:var(--white2);margin-bottom:1.5rem;">Set up your prediction question and let the crowd weigh in.</p>
-      
+      <p style="color:var(--white2);margin-bottom:1.5rem;font-size:0.85rem;">Set up your prediction question and let the crowd weigh in. Costs 100 tokens, refunded if rejected.</p>
+
       <div class="form-group">
         <label class="form-label">Market Question *</label>
         <input class="form-input" id="mkt-question" placeholder="e.g., Will India win the World Cup 2026?">
       </div>
-      
       <div class="form-group">
         <label class="form-label">Description (Optional)</label>
-        <textarea class="form-input" id="mkt-description" rows="2" placeholder="Add more context to help predictors..."></textarea>
+        <textarea class="form-input" id="mkt-description" rows="2" placeholder="Add context for predictors…"></textarea>
       </div>
-      
       <div class="form-group">
         <label class="form-label">Category</label>
         <select class="form-select" id="mkt-category">
           <option value="sports">🏏 Sports</option>
           <option value="economy">📊 Economy</option>
           <option value="entertainment">🎬 Entertainment</option>
-          <option value="tech">💻 Technology</option>
+          <option value="technology">💻 Technology</option>
           <option value="climate">🌿 Climate</option>
           <option value="crypto">₿ Crypto</option>
         </select>
       </div>
-      
       <div class="form-group">
         <label class="form-label">End Date *</label>
         <input class="form-input" type="date" id="mkt-enddate" value="${defaultDate}">
       </div>
-      
-      <div class="form-group">
-        <label class="form-label">Option A (Yes side)</label>
-        <input class="form-input" id="mkt-option-a" value="Yes" placeholder="Yes">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+        <div class="form-group">
+          <label class="form-label">Option A (Yes side)</label>
+          <input class="form-input" id="mkt-option-a" value="Yes" placeholder="Yes">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Option B (No side)</label>
+          <input class="form-input" id="mkt-option-b" value="No" placeholder="No">
+        </div>
       </div>
-      
-      <div class="form-group">
-        <label class="form-label">Option B (No side)</label>
-        <input class="form-input" id="mkt-option-b" value="No" placeholder="No">
+
+      <div style="background:var(--white1);padding:0.875rem;border-radius:8px;margin-bottom:1rem;font-size:0.82rem;color:var(--white2);">
+        <strong style="color:var(--green);">Your balance:</strong> ${State.userTokens.toLocaleString()} tokens · Submitting costs <strong>100 tokens</strong>.
       </div>
-      
-      <div style="background:var(--white1);padding:1rem;border-radius:8px;margin-bottom:1rem;">
-        <p style="font-size:0.85rem;color:var(--white2);margin:0;">
-          <strong style="color:var(--green);">Note:</strong> You will stake <strong>100 tokens</strong> to create this market. 
-          It will go live after admin review (usually within 24-48 hours).
-        </p>
-      </div>
-      
+
       <button class="btn btn-primary w-full" onclick="submitCreateMarket()">
         Create Market (100 tokens)
       </button>
     </div>
   `;
-  
+
   document.body.appendChild(modal);
-  
-  // Trigger animation - ensure display is set first
   requestAnimationFrame(() => {
     modal.style.display = 'flex';
-    requestAnimationFrame(() => {
-      modal.classList.add('active');
-    });
+    requestAnimationFrame(() => modal.classList.add('active'));
   });
 }
 
@@ -400,65 +425,56 @@ function closeCreateMarketModal() {
   const modal = document.getElementById('create-market-modal');
   if (modal) {
     modal.classList.remove('active');
-    modal.style.display = 'none';
-    setTimeout(() => {
-      if (modal.parentNode) modal.remove();
-    }, 300);
+    setTimeout(() => { if (modal.parentNode) modal.remove(); }, 300);
   }
 }
 
 async function submitCreateMarket() {
-  const question = document.getElementById('mkt-question').value.trim();
-  const category = document.getElementById('mkt-category').value;
-  const optA     = document.getElementById('mkt-option-a').value.trim() || 'Yes';
-  const optB     = document.getElementById('mkt-option-b').value.trim() || 'No';
-  const endDate  = document.getElementById('mkt-enddate').value;
-  const description = (document.getElementById('mkt-description')?.value || '').trim();
-  const submitBtn = document.querySelector('#create-market-modal .btn-primary');
+  const question    = document.getElementById('mkt-question')?.value.trim();
+  const category    = document.getElementById('mkt-category')?.value;
+  const optA        = document.getElementById('mkt-option-a')?.value.trim() || 'Yes';
+  const optB        = document.getElementById('mkt-option-b')?.value.trim() || 'No';
+  const endDate     = document.getElementById('mkt-enddate')?.value;
+  const description = document.getElementById('mkt-description')?.value.trim() || '';
+  const submitBtn   = document.querySelector('#create-market-modal .btn-primary');
 
-  // Validation
   if (!question) { showToast('Please enter a market question', 'yellow'); return; }
   if (question.length < 10) { showToast('Question too short — be more descriptive', 'yellow'); return; }
-  if (!endDate)  { showToast('Please select an end date', 'yellow'); return; }
+  if (!endDate) { showToast('Please select an end date', 'yellow'); return; }
+  if (State.userTokens < 100) { showToast('You need at least 100 tokens to create a market', 'red'); return; }
 
-  if (State.userTokens < 100) {
-    showToast('You need at least 100 tokens to create a market', 'red');
-    return;
-  }
-
-  // Category emoji mapping
   const catEmojis = {
     sports: '🏏 Sports', economy: '📊 Economy',
-    entertainment: '🎬 Entertainment', tech: '💻 Technology',
+    entertainment: '🎬 Entertainment', technology: '💻 Technology',
     climate: '🌿 Climate', crypto: '₿ Crypto'
   };
 
+  const displayName = State.currentUser?.displayName
+    || State.currentUser?.email?.split('@')[0]
+    || 'User';
+
   const newMarket = {
-    id:             Date.now(),          // in-memory id
-    question:       question,
-    description:    description,
+    id:             Date.now(),
+    question, description,
     cat:            catEmojis[category] || '🔮 Other',
-    optA:           optA,
-    optB:           optB,
+    optA, optB,
     pctA:           50,
     tokens:         100,
-    ends:           new Date(endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    ends:           new Date(endDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }),
     status:         'pending',
     createdBy:      State.currentUser?.uid || 'demo',
     createdByUid:   State.currentUser?.uid || 'demo',
     createdByEmail: State.currentUser?.email || '',
-    createdByName:  State.currentUser?.displayName || State.currentUser?.email?.split('@')[0] || 'User',
+    createdByName:  displayName,
     createdAt:      new Date().toISOString()
   };
 
-  // Deduct tokens first (optimistic)
+  // Optimistic deduction
   State.userTokens -= 100;
   updateTokenDisplay();
 
-  // Disable button while saving
   if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<span class="spinner"></span> Submitting…'; }
 
-  // Save to Firestore if connected
   if (!demoMode && db) {
     try {
       const docRef = await db.collection('markets').add({
@@ -466,37 +482,26 @@ async function submitCreateMarket() {
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       newMarket.firestoreId = docRef.id;
+      newMarket.id = docRef.id;
 
-      // Also deduct tokens in Firestore
       await db.collection('users').doc(State.currentUser.uid).update({
         tokens: firebase.firestore.FieldValue.increment(-100)
       });
     } catch (e) {
-      // Rollback optimistic deduction
       State.userTokens += 100;
       updateTokenDisplay();
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Create Market (100 tokens)'; }
-      showToast('Failed to submit market: ' + e.message, 'red');
+      showToast('Failed to submit: ' + e.message, 'red');
       return;
     }
   }
 
   State.userCreatedMarkets.push(newMarket);
-
   closeCreateMarketModal();
-
-  // Show/hide empty state
-  const listEl  = document.getElementById('markets-list');
-  const emptyEl = document.getElementById('markets-empty-state');
-  if (listEl)  listEl.style.display  = '';
-  if (emptyEl) emptyEl.style.display = 'none';
-
   if (typeof renderMarkets === 'function') renderMarkets();
-
-  setTimeout(() => {
-    showToast('Market submitted for admin review! ✅', 'green');
-  }, 400);
+  showToast('Market submitted for admin review! ✅', 'green');
 }
+
 // ── REWARDS PAGE ─────────────────────────────────────────────────────
 function buildRewardsPage() {
   const rewardCards = REWARDS.map(r => `
@@ -511,18 +516,13 @@ function buildRewardsPage() {
   document.getElementById('page-rewards').innerHTML = `
     <div class="rewards-coming-top">
       <span>🎁</span>
-      <span>
-        <strong>Rewards Marketplace — Coming Soon.</strong>
-        Earn tokens now, redeem for real brand offers when we launch.
-      </span>
+      <span><strong>Rewards Marketplace — Coming Soon.</strong>
+      Earn tokens now, redeem for real brand offers when we launch.</span>
     </div>
     <div class="page-header">
       <div class="section-label" style="margin-bottom:0.5rem">Rewards</div>
       <h1>Spend Your Tokens</h1>
-      <p>
-        Redeem earned tokens for discount coupons and exclusive offers from partner brands.
-        Launching soon — keep stacking those tokens!
-      </p>
+      <p>Redeem earned tokens for discount coupons and exclusive offers from partner brands.</p>
     </div>
     <div class="rewards-grid">${rewardCards}</div>
     ${buildFooter()}
@@ -532,14 +532,14 @@ function buildRewardsPage() {
 // ── PROFILE PAGE ─────────────────────────────────────────────────────
 function buildProfilePage() {
   document.getElementById('page-profile').innerHTML = `
-    <!-- Logged out state -->
+    <!-- Logged out -->
     <div id="profile-logged-out" class="coming-soon-wrap">
       <h2>Your Profile</h2>
-      <p>Sign up or log in to see your token balance, prediction history, and leaderboard rank.</p>
+      <p>Sign up or log in to see your token balance, prediction history, and rank.</p>
       <button class="btn btn-primary btn-lg" onclick="openAuth()">Sign Up / Log In</button>
     </div>
 
-    <!-- Logged in state -->
+    <!-- Logged in -->
     <div id="profile-logged-in" style="display:none">
       <div class="page-header">
         <div class="section-label" style="margin-bottom:0.5rem">Profile</div>
@@ -551,9 +551,35 @@ function buildProfilePage() {
         <div>
           <div class="profile-card">
             <div class="profile-avatar">👤</div>
-            <div class="profile-name"  id="profile-display-name">User</div>
+
+            <!-- Username display with edit toggle -->
+            <div id="profile-name-display" style="margin-bottom:0.1rem;">
+              <div class="profile-name" id="profile-display-name">User</div>
+              <button onclick="toggleUsernameEdit(true)"
+                      style="background:none;border:1px solid var(--border2);border-radius:var(--radius-sm);
+                             padding:0.2rem 0.6rem;font-family:var(--font-mono);font-size:0.65rem;
+                             color:var(--white3);cursor:pointer;margin-top:0.3rem;transition:all 0.2s;"
+                      onmouseover="this.style.color='var(--green)';this.style.borderColor='var(--green)'"
+                      onmouseout="this.style.color='var(--white3)';this.style.borderColor='var(--border2)'">
+                ✏️ Edit Username
+              </button>
+            </div>
+
+            <!-- Username edit form (hidden by default) -->
+            <div id="profile-name-edit" style="display:none;margin-bottom:0.5rem;">
+              <input id="username-edit-input" class="form-input"
+                     placeholder="New username" maxlength="30"
+                     style="margin-bottom:0.5rem;text-align:center;">
+              <div style="display:flex;gap:0.5rem;">
+                <button onclick="saveUsername()"
+                        class="btn btn-primary" style="flex:1;padding:0.5rem;">Save</button>
+                <button onclick="toggleUsernameEdit(false)"
+                        class="btn btn-ghost" style="flex:1;padding:0.5rem;">Cancel</button>
+              </div>
+            </div>
+
             <div class="profile-email" id="profile-display-email">user@email.com</div>
-            <div class="token-display">
+            <div class="token-display" style="margin-top:1rem;">
               <div class="label">Token Balance</div>
               <div>
                 <span class="amount" id="profile-token-amount">1000</span>
@@ -568,34 +594,26 @@ function buildProfilePage() {
 
         <!-- Right column -->
         <div class="profile-stats">
-          <!-- Quick stats -->
           <div class="stat-box">
             <h3><span class="icon">📊</span> Your Stats</h3>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;text-align:center;">
               <div>
-                <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:800;color:var(--green)"
-                     id="stat-predictions">0</div>
-                <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--white3);
-                            text-transform:uppercase;letter-spacing:0.06em;">Predictions</div>
+                <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:800;color:var(--green)" id="stat-predictions">0</div>
+                <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--white3);text-transform:uppercase;letter-spacing:0.06em;">Predictions</div>
               </div>
               <div>
-                <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:800;color:var(--green)"
-                     id="stat-accuracy">—</div>
-                <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--white3);
-                            text-transform:uppercase;letter-spacing:0.06em;">Accuracy</div>
+                <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:800;color:var(--green)" id="stat-accuracy">—</div>
+                <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--white3);text-transform:uppercase;letter-spacing:0.06em;">Accuracy</div>
               </div>
               <div>
-                <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:800;color:var(--green)"
-                     id="stat-rank">#—</div>
-                <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--white3);
-                            text-transform:uppercase;letter-spacing:0.06em;">Rank</div>
+                <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:800;color:var(--green)" id="stat-rank">#—</div>
+                <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--white3);text-transform:uppercase;letter-spacing:0.06em;">Rank</div>
               </div>
             </div>
           </div>
 
-          <!-- Leaderboard -->
           <div class="stat-box">
-            <h3><span class="icon">🏆</span> Leaderboard (Top Predictors)</h3>
+            <h3><span class="icon">🏆</span> Leaderboard</h3>
             <div id="leaderboard-list">
               ${LEADERBOARD_SEED.map(lb => `
                 <div class="leaderboard-item">
@@ -607,12 +625,11 @@ function buildProfilePage() {
               <div class="leaderboard-item" id="your-lb-row" style="display:none">
                 <span class="lb-rank" id="your-lb-rank">—</span>
                 <span class="lb-name you" id="your-lb-name">You</span>
-                <span class="lb-score" id="your-lb-score">1,000 tkn</span>
+                <span class="lb-score" id="your-lb-score">—</span>
               </div>
             </div>
           </div>
 
-          <!-- Prediction history -->
           <div class="stat-box">
             <h3><span class="icon">🔮</span> Your Predictions</h3>
             <div id="prediction-history">
@@ -621,15 +638,57 @@ function buildProfilePage() {
               </p>
             </div>
           </div>
+
+          <!-- Your created markets -->
+          <div class="stat-box" id="your-markets-box" style="display:none">
+            <h3><span class="icon">📈</span> Your Submitted Markets</h3>
+            <div id="your-markets-list"></div>
+          </div>
         </div>
       </div>
     </div>
-
     ${buildFooter()}
   `;
 }
 
-// ── Render profile data (called on page visit) ────────────────────────
+// ── Toggle username edit form ─────────────────────────────────────────
+function toggleUsernameEdit(show) {
+  document.getElementById('profile-name-display').style.display = show ? 'none' : '';
+  document.getElementById('profile-name-edit').style.display = show ? '' : 'none';
+  if (show) {
+    const input = document.getElementById('username-edit-input');
+    input.value = State.currentUser?.displayName || '';
+    input.focus();
+  }
+}
+
+// ── Save new username ─────────────────────────────────────────────────
+async function saveUsername() {
+  const newName = document.getElementById('username-edit-input')?.value.trim();
+  if (!newName || newName.length < 2) { showToast('Username must be at least 2 characters', 'yellow'); return; }
+  if (newName.length > 30) { showToast('Username too long (max 30 characters)', 'yellow'); return; }
+
+  try {
+    if (!demoMode && auth?.currentUser) {
+      await auth.currentUser.updateProfile({ displayName: newName });
+    }
+    if (State.currentUser) State.currentUser.displayName = newName;
+
+    // Update Firestore
+    if (!demoMode && db && State.currentUser) {
+      await db.collection('users').doc(State.currentUser.uid).update({ displayName: newName });
+    }
+
+    toggleUsernameEdit(false);
+    renderProfile();
+    updateNavForAuth();
+    showToast('✅ Username updated!', 'green');
+  } catch (e) {
+    showToast('Failed to update username: ' + e.message, 'red');
+  }
+}
+
+// ── Render profile data ───────────────────────────────────────────────
 function renderProfile() {
   if (!State.currentUser) {
     document.getElementById('profile-logged-out').style.display = '';
@@ -643,27 +702,72 @@ function renderProfile() {
     || State.currentUser.email?.split('@')[0]
     || 'User';
 
-  document.getElementById('profile-display-name').textContent  = name;
-  document.getElementById('profile-display-email').textContent = State.currentUser.email || 'demo@crowdverse.in';
-  document.getElementById('your-lb-name').textContent          = name + ' (You)';
-  document.getElementById('your-lb-row').style.display         = '';
-  document.getElementById('stat-predictions').textContent      = State.userPredictions.length;
+  const nameEl = document.getElementById('profile-display-name');
+  const emailEl = document.getElementById('profile-display-email');
+  const lbNameEl = document.getElementById('your-lb-name');
+  const lbRowEl = document.getElementById('your-lb-row');
+  const statPredEl = document.getElementById('stat-predictions');
+
+  if (nameEl) nameEl.textContent = name;
+  if (emailEl) emailEl.textContent = State.currentUser.email || 'demo@crowdverse.in';
+  if (lbNameEl) lbNameEl.textContent = name + ' (You)';
+  if (lbRowEl) lbRowEl.style.display = '';
+  if (statPredEl) statPredEl.textContent = State.userPredictions.length;
+
   updateTokenDisplay();
 
   // Prediction history
   const histEl = document.getElementById('prediction-history');
-  if (State.userPredictions.length === 0) {
-    histEl.innerHTML = `
-      <p style="color:var(--white3);font-size:0.85rem;font-family:var(--font-mono);">
-        No predictions yet. Head to Markets to place your first one!
-      </p>`;
-  } else {
-    histEl.innerHTML = State.userPredictions.map(p => `
-      <div class="pred-history-item">
-        <span class="pred-outcome pred-pending">PENDING</span>
-        <span class="pred-title">${escHtml(p.question)}</span>
-        <span class="pred-tokens">−${p.amount} tkn · ${escHtml(p.option)}</span>
-      </div>
-    `).join('');
+  if (histEl) {
+    if (State.userPredictions.length === 0) {
+      histEl.innerHTML = `<p style="color:var(--white3);font-size:0.85rem;font-family:var(--font-mono);">No predictions yet. Head to Markets!</p>`;
+    } else {
+      histEl.innerHTML = State.userPredictions.map(p => `
+        <div class="pred-history-item">
+          <span class="pred-outcome pred-pending">PENDING</span>
+          <span class="pred-title">${escHtml(p.question)}</span>
+          <span class="pred-tokens">−${p.amount} · ${escHtml(p.option)}
+            ${p.potentialWin ? `<br><small style="color:var(--green);">+${p.potentialWin} if win</small>` : ''}
+          </span>
+        </div>
+      `).join('');
+    }
   }
+
+  // User's submitted markets
+  const myMarketsBox = document.getElementById('your-markets-box');
+  const myMarketsList = document.getElementById('your-markets-list');
+  const myMarkets = State.userCreatedMarkets.filter(m => m.createdBy === State.currentUser?.uid);
+  if (myMarketsBox && myMarketsList) {
+    if (myMarkets.length > 0) {
+      myMarketsBox.style.display = '';
+      myMarketsList.innerHTML = myMarkets.map(m => `
+        <div style="padding:0.75rem;border-bottom:1px solid var(--border);font-size:0.85rem;">
+          <div style="font-weight:600;color:var(--white);margin-bottom:0.25rem;">${escHtml(m.question)}</div>
+          <div style="font-family:var(--font-mono);font-size:0.72rem;color:${m.status === 'live' ? 'var(--green)' : m.status === 'rejected' ? '#ff8888' : 'var(--yellow)'};">
+            ${m.status === 'live' ? '● Live' : m.status === 'rejected' ? '✕ Rejected' : '⏳ Pending Review'}
+          </div>
+        </div>
+      `).join('');
+    } else {
+      myMarketsBox.style.display = 'none';
+    }
+  }
+}
+
+// ── ADMIN PAGE ────────────────────────────────────────────────────────
+function buildAdminPage() {
+  const el = document.getElementById('page-admin');
+  if (!el) return;
+  el.innerHTML = `
+    <!-- Auth wall -->
+    <div id="admin-auth-wall" class="coming-soon-wrap">
+      <div style="font-size:3.5rem;margin-bottom:1rem">🔐</div>
+      <h2 style="font-family:var(--font-display)">Admin Access Only</h2>
+      <p>This area is restricted to CrowdVerse administrators.</p>
+      <button class="btn btn-primary btn-lg" onclick="openAuth()">Log In as Admin</button>
+    </div>
+    <!-- Panel injected by admin.js -->
+    <div id="admin-panel-content" style="display:none"></div>
+  `;
 }
