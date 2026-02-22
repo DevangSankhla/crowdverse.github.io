@@ -4,170 +4,245 @@
 
 /**
  * Navigate to a named page.
- * @param {string} id — 'home' | 'community' | 'markets' | 'rewards' | 'profile' | 'admin'
  */
 function showPage(id) {
-  // Admin page is secret — only accessible if admin
   if (id === 'admin' && !isAdmin()) {
-    if (!State.currentUser) {
-      openAuth();
-      return;
-    }
+    if (!State.currentUser) { openAuth(); return; }
     showToast('⛔ Admin access only.', 'red');
     return;
   }
 
-  // Deactivate all pages & nav links
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  document.querySelectorAll('.mobile-nav-btn').forEach(b => b.classList.remove('active'));
 
-  // Activate chosen page & nav link
   const pageEl = document.getElementById('page-' + id);
   if (pageEl) pageEl.classList.add('active');
 
   const linkEl = document.querySelector(`[data-page="${id}"]`);
   if (linkEl) linkEl.classList.add('active');
 
-  // Scroll to top
+  // Mobile nav active state
+  const mobileBtn = document.querySelector(`.mobile-nav-btn[data-page="${id}"]`);
+  if (mobileBtn) mobileBtn.classList.add('active');
+
   window.scrollTo({ top: 0, behavior: 'instant' });
 
-  // Page-specific re-render
-  if (id === 'markets') loadAndRenderMarkets();
-  if (id === 'profile')  renderProfile();
-  if (id === 'admin')    renderAdminPage();
+  if (id === 'home')      updateHeroCta();
+  if (id === 'markets')   loadAndRenderMarkets();
+  if (id === 'profile')   renderProfile();
+  if (id === 'admin')     renderAdminPage();
+  if (id === 'community') {
+    // Update community token count
+    const el = document.getElementById('community-token-count');
+    if (el) el.textContent = State.userTokens.toLocaleString() || '—';
+  }
 }
 
-// ── Handle URL parameters for direct market links ────────────────────
+// ── Handle URL deep links ─────────────────────────────────────────────
 function handleDeepLink() {
   const params = new URLSearchParams(window.location.search);
-  const page = params.get('page');
-  const marketId = params.get('id');
-  
-  if (page === 'markets' && marketId) {
-    // Navigate to markets page first
+  const page   = params.get('page');
+  const mktId  = params.get('id');
+
+  if (page === 'markets' && mktId) {
     showPage('markets');
-    // Then try to find and highlight the market
-    setTimeout(() => {
-      highlightAndScrollToMarket(marketId);
-    }, 500);
+    setTimeout(() => _tryOpenMarket(mktId), 800);
     return true;
-  } else if (page === 'community' && marketId) {
+  }
+  if (page === 'community' && mktId) {
     showPage('community');
-    setTimeout(() => {
-      highlightAndScrollToMarket(marketId, 'community');
-    }, 500);
+    setTimeout(() => _tryOpenMarket(mktId), 500);
     return true;
   }
   return false;
 }
 
-// ── Highlight and scroll to a specific market ─────────────────────────
-function highlightAndScrollToMarket(marketId, pageType = 'markets') {
-  // Try to find the market card by data attribute
-  const cards = document.querySelectorAll('.market-card, .market-card-full');
-  let targetCard = null;
-  
-  cards.forEach(card => {
-    if (card.dataset.marketId === marketId || card.dataset.marketId === marketId.toString()) {
-      targetCard = card;
-    }
-  });
-  
-  if (targetCard) {
-    targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    targetCard.style.animation = 'highlightPulse 2s ease';
-    setTimeout(() => {
-      targetCard.style.animation = '';
-    }, 2000);
-  } else if (!demoMode && db) {
-    // If market not found in DOM, try to fetch it
-    fetchAndShowMarketModal(marketId);
-  }
-}
+// ── Try to open a market by ID (deep link resolver) ───────────────────
+async function _tryOpenMarket(marketId) {
+  const id = String(marketId);
 
-// ── Fetch market and show modal ───────────────────────────────────────
-async function fetchAndShowMarketModal(marketId) {
+  // 1. Try to find in currently loaded data
+  const m = findMarketById(id);
+  if (m) {
+    _highlightCard(id);
+    if (m.status === 'live') openVote(id, null, null);
+    return;
+  }
+
+  // 2. Try to scroll to card (might render after fetch)
+  const cardEl = document.querySelector(`[data-market-id="${id}"]`);
+  if (cardEl) {
+    _highlightCard(id);
+    return;
+  }
+
+  // 3. Fetch from Firestore
+  if (demoMode || !db) return;
   try {
-    const doc = await db.collection('markets').doc(marketId).get();
+    const doc = await db.collection('markets').doc(id).get();
     if (doc.exists) {
-      const m = { id: doc.id, firestoreId: doc.id, ...doc.data() };
-      if (m.status === 'live') {
-        openVote(m.id || m.firestoreId, null, null);
+      const data = doc.data();
+      const market = { id: doc.id, firestoreId: doc.id, ...data };
+
+      // Add to firestoreMarkets if not already there
+      const exists = State.firestoreMarkets.find(m => m.firestoreId === id);
+      if (!exists && data.status === 'live') {
+        State.firestoreMarkets.push(market);
+        renderMarkets();
       }
+
+      setTimeout(() => {
+        _highlightCard(id);
+        if (market.status === 'live') {
+          // Inject directly into the find cache and open
+          openVote(id, null, null);
+        }
+      }, 300);
     }
   } catch (e) {
-    console.warn('Could not fetch market:', e);
+    console.warn('Deep link market fetch failed:', e);
   }
 }
 
-// ── Share market function ─────────────────────────────────────────────
+// ── Highlight and scroll to a market card ────────────────────────────
+function _highlightCard(marketId) {
+  const card = document.querySelector(`[data-market-id="${marketId}"]`);
+  if (!card) return;
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  card.style.animation = 'highlightPulse 2s ease';
+  setTimeout(() => { card.style.animation = ''; }, 2100);
+}
+
+// ── Kept for backward compat (called from community page links) ───────
+function highlightAndScrollToMarket(marketId) {
+  _tryOpenMarket(marketId);
+}
+
+// ── Share market ──────────────────────────────────────────────────────
 async function shareMarket(marketId, question, pageType = 'markets') {
-  const shareUrl = `${window.location.origin}${window.location.pathname}?page=${pageType}&id=${marketId}`;
-  const shareText = `Predict: "${question}" on CrowdVerse — India's First Prediction Market 🇮🇳`;
-  
+  const shareUrl  = `${window.location.origin}${window.location.pathname}?page=${pageType}&id=${marketId}`;
+  const shareText = `Predict: "${question}" on CrowdVerse 🇮🇳`;
+
   if (navigator.share) {
     try {
-      await navigator.share({
-        title: 'CrowdVerse Prediction',
-        text: shareText,
-        url: shareUrl
-      });
-    } catch (err) {
-      // User cancelled or share failed
-      copyToClipboard(shareUrl);
-    }
-  } else {
-    copyToClipboard(shareUrl);
+      await navigator.share({ title: 'CrowdVerse Prediction', text: shareText, url: shareUrl });
+      return;
+    } catch (_) {}
   }
+  _copyToClipboard(shareUrl);
 }
 
-// ── Copy to clipboard helper ──────────────────────────────────────────
-function copyToClipboard(text) {
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(() => {
-      showToast('🔗 Link copied to clipboard!', 'green');
-    }).catch(() => {
-      // Fallback
-      const input = document.createElement('input');
-      input.value = text;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand('copy');
-      document.body.removeChild(input);
-      showToast('🔗 Link copied to clipboard!', 'green');
-    });
-  } else {
-    // Final fallback
-    const input = document.createElement('input');
-    input.value = text;
-    document.body.appendChild(input);
-    input.select();
+function _copyToClipboard(text) {
+  const fallback = () => {
+    const inp = document.createElement('input');
+    inp.value = text;
+    document.body.appendChild(inp);
+    inp.select();
     document.execCommand('copy');
-    document.body.removeChild(input);
-    showToast('🔗 Link copied to clipboard!', 'green');
+    document.body.removeChild(inp);
+    showToast('🔗 Link copied!', 'green');
+  };
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).then(() => showToast('🔗 Link copied!', 'green')).catch(fallback);
+  } else { fallback(); }
+}
+// expose for legacy calls
+function copyToClipboard(text) { _copyToClipboard(text); }
+function fetchAndShowMarketModal(id) { _tryOpenMarket(id); }
+
+// ── Build mobile bottom navigation bar ───────────────────────────────
+function buildMobileNav() {
+  const nav = document.createElement('nav');
+  nav.id = 'mobile-nav';
+  nav.innerHTML = `
+    <button class="mobile-nav-btn active" data-page="home" onclick="showPage('home')">
+      <span class="mobile-nav-icon">🏠</span>
+      <span class="mobile-nav-label">Home</span>
+    </button>
+    <button class="mobile-nav-btn" data-page="community" onclick="showPage('community')">
+      <span class="mobile-nav-icon">👥</span>
+      <span class="mobile-nav-label">Community</span>
+    </button>
+    <button class="mobile-nav-btn" data-page="markets" onclick="showPage('markets')">
+      <span class="mobile-nav-icon">📈</span>
+      <span class="mobile-nav-label">Markets</span>
+    </button>
+    <button class="mobile-nav-btn" data-page="rewards" onclick="showPage('rewards')">
+      <span class="mobile-nav-icon">🎁</span>
+      <span class="mobile-nav-label">Rewards</span>
+    </button>
+    <button class="mobile-nav-btn" data-page="profile" onclick="showPage('profile')">
+      <span class="mobile-nav-icon">👤</span>
+      <span class="mobile-nav-label">Profile</span>
+    </button>
+  `;
+  document.body.appendChild(nav);
+
+  // Inject mobile nav CSS
+  if (!document.getElementById('mobile-nav-styles')) {
+    const style = document.createElement('style');
+    style.id = 'mobile-nav-styles';
+    style.textContent = `
+      #mobile-nav {
+        display: none;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        z-index: 999;
+        background: rgba(10,10,10,0.97);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-top: 1px solid #222;
+        padding: 0;
+        height: 64px;
+        grid-template-columns: repeat(5, 1fr);
+        align-items: stretch;
+      }
+      .mobile-nav-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        padding: 0;
+        background: none;
+        border: none;
+        cursor: pointer;
+        transition: all 0.15s;
+        color: #555;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+      }
+      .mobile-nav-btn.active { color: var(--green); }
+      .mobile-nav-btn:active { transform: scale(0.92); }
+      .mobile-nav-icon { font-size: 1.35rem; line-height: 1; }
+      .mobile-nav-label { font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 0.03em; }
+      @media (max-width: 640px) {
+        #mobile-nav { display: grid; }
+        .page { padding-bottom: 64px; }
+        body { padding-bottom: 64px; }
+      }
+    `;
+    document.head.appendChild(style);
   }
 }
 
 // ── Bootstrap ─────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // Build all page HTML
   buildHomePage();
   buildCommunityPage();
   buildMarketsPage();
   buildRewardsPage();
   buildProfilePage();
   buildAdminPage();
-
-  // Wire up modal backdrop closes
+  buildMobileNav();
   initModalBackdropClose();
 
-  // Check for deep link, otherwise start on home
   if (!handleDeepLink()) {
     showPage('home');
   }
 
   if (demoMode) {
-    console.log('🎮 CrowdVerse is running in Demo Mode.');
-    console.log('   To enable real auth, update js/config.js with your Firebase credentials.');
+    console.log('🎮 CrowdVerse running in Demo Mode. Update config.js with Firebase credentials to go live.');
   }
 });
