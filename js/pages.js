@@ -102,9 +102,21 @@ function buildHomePage() {
       <div class="market-cards">
         ${SAMPLE_MARKETS.slice(0, 3).map(m => {
           const pctB = 100 - m.pctA;
+          const marketId = m.firestoreId || m.id;
           return `
-          <div class="market-card" onclick="if(State.currentUser){openVote(${m.id},null,event)}else{openAuth()}">
-            <div class="market-cat">${escHtml(m.cat)}</div>
+          <div class="market-card" data-market-id="${marketId}" onclick="if(event.target.closest('.share-btn')) return; if(State.currentUser){openVote(${m.id},null,event)}else{openAuth()}">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
+              <div class="market-cat">${escHtml(m.cat)}</div>
+              <button class="share-btn" onclick="shareMarket('${marketId}', '${escHtml(m.question).replace(/'/g, "\\'")}', 'community')" 
+                      style="background:var(--white1);border:none;border-radius:50%;width:32px;height:32px;
+                             cursor:pointer;display:flex;align-items:center;justify-content:center;
+                             transition:all 0.2s;font-size:0.9rem;z-index:10;" 
+                      title="Copy link to this prediction"
+                      onmouseover="this.style.background='var(--green)';this.style.transform='scale(1.1)';"
+                      onmouseout="this.style.background='var(--white1)';this.style.transform='scale(1)';">
+                🔗
+              </button>
+            </div>
             <h3>${escHtml(m.question)}</h3>
             <div class="odds-bar">
               <div class="odds-fill" style="width:${m.pctA}%"></div>
@@ -187,9 +199,21 @@ function buildCommunityPage() {
       <div class="market-cards">
         ${SAMPLE_MARKETS.map(m => {
           const pctB = 100 - m.pctA;
+          const marketId = m.firestoreId || m.id;
           return `
-          <div class="market-card" onclick="openVote(${m.id}, null, event)">
-            <div class="market-cat">${escHtml(m.cat)}</div>
+          <div class="market-card" data-market-id="${marketId}" onclick="if(event.target.closest('.share-btn')) return; openVote(${m.id}, null, event)">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
+              <div class="market-cat">${escHtml(m.cat)}</div>
+              <button class="share-btn" onclick="shareMarket('${marketId}', '${escHtml(m.question).replace(/'/g, "\\'")}', 'community')" 
+                      style="background:var(--white1);border:none;border-radius:50%;width:32px;height:32px;
+                             cursor:pointer;display:flex;align-items:center;justify-content:center;
+                             transition:all 0.2s;font-size:0.9rem;" 
+                      title="Share this prediction"
+                      onmouseover="this.style.background='var(--green)';this.style.transform='scale(1.1)';"
+                      onmouseout="this.style.background='var(--white1)';this.style.transform='scale(1)';">
+                🔗
+              </button>
+            </div>
             <h3>${escHtml(m.question)}</h3>
             <div class="odds-bar">
               <div class="odds-fill" style="width:${m.pctA}%"></div>

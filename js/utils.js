@@ -146,6 +146,18 @@ function initModalBackdropClose() {
   });
 }
 
+/**
+ * Escape HTML to prevent XSS in dynamic content.
+ */
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // Add animation styles for toast
 const toastStyles = document.createElement('style');
 toastStyles.textContent = `

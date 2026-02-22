@@ -8,29 +8,63 @@ async function loadAndRenderMarkets() {
 
   if (demoMode || !db) return;
 
+  const fetched = [];
+  
   try {
-    // Simple .where() only — no orderBy needed, avoids composite index error
-    const snap = await db.collection('markets')
+    // Try fetching 'live' status first (what admin sets on approval)
+    const snapLive = await db.collection('markets')
       .where('status', '==', 'live')
       .get();
-
-    const fetched = [];
-    snap.forEach(doc => {
-      fetched.push({ id: doc.id, firestoreId: doc.id, ...doc.data() });
+    
+    snapLive.forEach(doc => {
+      fetched.push({ 
+        id: doc.id, 
+        firestoreId: doc.id, 
+        ...doc.data(),
+        status: 'live'
+      });
     });
-
-    // Sort newest-approved first, done client-side
-    fetched.sort((a, b) => {
-      const tA = a.approvedAt?.seconds || 0;
-      const tB = b.approvedAt?.seconds || 0;
-      return tB - tA;
-    });
-
-    State.firestoreMarkets = fetched;
-    renderMarkets(); // re-render with full live dataset
   } catch (e) {
-    console.warn('Failed to load Firestore markets:', e);
+    console.warn('Failed to fetch live markets:', e);
   }
+  
+  // Also try fetching 'approved' status (in case some use this)
+  try {
+    const snapApproved = await db.collection('markets')
+      .where('status', '==', 'approved')
+      .get();
+    
+    snapApproved.forEach(doc => {
+      fetched.push({ 
+        id: doc.id, 
+        firestoreId: doc.id, 
+        ...doc.data(),
+        status: 'live' // Normalize to 'live'
+      });
+    });
+  } catch (e) {
+    console.warn('Failed to fetch approved markets:', e);
+  }
+
+  // Remove duplicates (in case a market has both statuses somehow)
+  const uniqueMarkets = [];
+  const seenIds = new Set();
+  for (const m of fetched) {
+    if (!seenIds.has(m.firestoreId)) {
+      seenIds.add(m.firestoreId);
+      uniqueMarkets.push(m);
+    }
+  }
+
+  // Sort newest-approved first, done client-side
+  uniqueMarkets.sort((a, b) => {
+    const tA = a.approvedAt?.seconds || a.createdAt?.seconds || 0;
+    const tB = b.approvedAt?.seconds || b.createdAt?.seconds || 0;
+    return tB - tA;
+  });
+
+  State.firestoreMarkets = uniqueMarkets;
+  renderMarkets(); // re-render with full live dataset
 }
 
 // ── Render all markets on the Markets page ────────────────────────────
@@ -48,12 +82,26 @@ function renderMarkets() {
   allMarkets.forEach(m => {
     const pctB = 100 - m.pctA;
     const isUser = !!m.createdBy;
+    const marketId = m.firestoreId || m.id;
+    const isLive = m.status === 'live';
     const card = document.createElement('div');
     card.className = 'market-card-full';
+    card.dataset.marketId = marketId;
     card.innerHTML = `
-      <div class="market-status ${m.status === 'live' ? 'status-live' : 'status-pending'}">
-        ${m.status === 'live' ? '● Live' : '⏳ Under Review'}
-        ${isUser ? ' · Your Market' : ''}
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;">
+        <div class="market-status ${isLive ? 'status-live' : 'status-pending'}">
+          ${isLive ? '● Live' : '⏳ Under Review'}
+          ${isUser ? ' · Your Market' : ''}
+        </div>
+        <button onclick="shareMarket('${marketId}', '${escHtml(m.question).replace(/'/g, "\\'")}', 'markets')" 
+                style="background:var(--white1);border:none;border-radius:50%;width:36px;height:36px;
+                       cursor:pointer;display:flex;align-items:center;justify-content:center;
+                       transition:all 0.2s;" 
+                title="Share this market"
+                onmouseover="this.style.background='var(--green)';this.style.transform='scale(1.1)';"
+                onmouseout="this.style.background='var(--white1)';this.style.transform='scale(1)';">
+          🔗
+        </button>
       </div>
       <h3>${escHtml(m.question)}</h3>
       <div class="market-cat" style="margin-bottom:0.75rem">${m.cat}</div>
@@ -79,7 +127,7 @@ function renderMarkets() {
         <span class="vol" style="color:var(--green);font-weight:600;">${m.tokens.toLocaleString()} tokens pooled</span>
       </div>
       
-      ${m.status === 'live'
+      ${isLive
         ? `<div class="vote-buttons" style="display:flex;gap:0.75rem;margin-top:1rem;">
              <button class="vote-btn vote-yes" onclick="openVote(${m.id}, 'a', event)" style="flex:1;padding:0.875rem;background:var(--green);color:var(--black);border:none;border-radius:8px;font-weight:700;cursor:pointer;transition:all 0.2s;">
                ${escHtml(m.optA)}
