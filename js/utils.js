@@ -65,14 +65,20 @@ function updateTokenDisplay() {
  */
 function updateNavForAuth() {
   const loggedIn = !!State.currentUser;
-  const loginBtn = document.getElementById('nav-login-btn');
-  const logoutBtn = document.getElementById('nav-logout-btn');
+  const loginBtn   = document.getElementById('nav-login-btn');
+  const logoutBtn  = document.getElementById('nav-logout-btn');
   const tokenBadge = document.getElementById('token-nav-badge');
-  
-  if (loginBtn) loginBtn.style.display = loggedIn ? 'none' : '';
-  if (logoutBtn) logoutBtn.style.display = loggedIn ? '' : 'none';
+  const adminLink  = document.getElementById('admin-nav-link');
+
+  if (loginBtn)   loginBtn.style.display   = loggedIn ? 'none' : '';
+  if (logoutBtn)  logoutBtn.style.display  = loggedIn ? '' : 'none';
   if (tokenBadge) tokenBadge.style.display = loggedIn ? '' : 'none';
-  
+
+  // Admin nav link — only shown to admin account
+  if (adminLink) {
+    adminLink.style.display = (loggedIn && typeof isAdmin === 'function' && isAdmin()) ? '' : 'none';
+  }
+
   updateTokenDisplay();
 }
 
@@ -86,7 +92,6 @@ function buildFooter() {
         <div class="footer-brand">
           <img src="assets/logo.jpg" alt="CrowdVerse">
           <span class="footer-brand-name">Crowd<span class="accent">Verse</span></span>
-          <a href="admin.html" class="admin-link" title="Admin Panel">⚙️</a>
         </div>
         <div class="footer-disclaimer">
           <strong>⚠️ Important Disclaimer:</strong> CrowdVerse is a skill-based prediction and
