@@ -363,9 +363,12 @@ function openCreateMarketModal() {
   
   document.body.appendChild(modal);
   
-  // Trigger animation
+  // Trigger animation - ensure display is set first
   requestAnimationFrame(() => {
-    modal.classList.add('active');
+    modal.style.display = 'flex';
+    requestAnimationFrame(() => {
+      modal.classList.add('active');
+    });
   });
 }
 
@@ -373,7 +376,10 @@ function closeCreateMarketModal() {
   const modal = document.getElementById('create-market-modal');
   if (modal) {
     modal.classList.remove('active');
-    setTimeout(() => modal.remove(), 300);
+    modal.style.display = 'none';
+    setTimeout(() => {
+      if (modal.parentNode) modal.remove();
+    }, 300);
   }
 }
 

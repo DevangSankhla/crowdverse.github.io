@@ -198,6 +198,10 @@ function openVote(marketId, preselectedOpt, e) {
     </div>
   `;
   
+  // Show modal - set display first, then add active for animation
+  modal.style.display = 'flex';
+  // Force reflow
+  void modal.offsetWidth;
   modal.classList.add('active');
   
   // Add slider styling
@@ -235,7 +239,10 @@ function closePolymarketVoteModal() {
   const modal = document.getElementById('polymarket-vote-modal');
   if (modal) {
     modal.classList.remove('active');
-    setTimeout(() => modal.remove(), 300);
+    modal.style.display = 'none';
+    setTimeout(() => {
+      if (modal.parentNode) modal.remove();
+    }, 300);
   }
   State.selectedVoteOption = null;
   State.activeMarketId = null;
