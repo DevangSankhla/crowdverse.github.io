@@ -77,8 +77,13 @@ function openVote(marketId, preselectedOpt, e) {
   State.selectedVoteOption = preselectedOpt || null;
 
   // Calculate odds (inverse of probability)
-  const oddsA = m.pctA > 0 ? (100 / m.pctA).toFixed(2) : '∞';
-  const oddsB = m.pctA < 100 ? (100 / (100 - m.pctA)).toFixed(2) : '∞';
+  const pctA = m.pctA || 50;
+  const oddsA = pctA > 0 ? (100 / pctA).toFixed(2) : '∞';
+  const oddsB = pctA < 100 ? (100 / (100 - pctA)).toFixed(2) : '∞';
+  
+  // Initialize current odds based on preselection
+  currentOdds = preselectedOpt === 'a' ? parseFloat(oddsA) : preselectedOpt === 'b' ? parseFloat(oddsB) : 1;
+  currentMarketProb = pctA;
 
   // Create modal if not exists
   let modal = document.getElementById('polymarket-vote-modal');
@@ -89,14 +94,16 @@ function openVote(marketId, preselectedOpt, e) {
     document.body.appendChild(modal);
   }
 
+  const pctB = 100 - currentMarketProb;
+  
   modal.innerHTML = `
-    <div class="modal" style="max-width:420px;padding:0;overflow:hidden;">
+    <div class="modal" style="max-width:420px;padding:0;overflow:hidden;background:var(--off-black);border:1px solid var(--border2);">
       <!-- Header -->
-      <div style="padding:1.5rem;border-bottom:1px solid var(--white1);">
+      <div style="padding:1.5rem;border-bottom:1px solid var(--border);">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
           <div>
-            <div style="font-size:0.75rem;color:var(--green);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.25rem;">${m.cat}</div>
-            <h3 style="font-size:1.1rem;line-height:1.4;margin:0;">${escHtml(m.question)}</h3>
+            <div style="font-size:0.75rem;color:var(--green);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.25rem;">${escHtml(m.cat)}</div>
+            <h3 style="font-size:1.1rem;line-height:1.4;margin:0;color:var(--white);">${escHtml(m.question)}</h3>
           </div>
           <button onclick="closePolymarketVoteModal()" style="background:none;border:none;color:var(--white3);font-size:1.5rem;cursor:pointer;padding:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:all 0.2s;">✕</button>
         </div>
@@ -109,33 +116,33 @@ function openVote(marketId, preselectedOpt, e) {
         
         <div class="outcome-options" style="display:flex;flex-direction:column;gap:0.75rem;">
           <button class="outcome-btn ${preselectedOpt === 'a' ? 'selected' : ''}" 
-                  onclick="selectOutcome('a', ${m.pctA}, ${oddsA})"
+                  onclick="selectOutcome('a', ${currentMarketProb}, ${oddsA})"
                   data-option="a"
-                  style="display:flex;align-items:center;justify-content:space-between;padding:1rem;background:var(--white1);border:2px solid ${preselectedOpt === 'a' ? 'var(--green)' : 'transparent'};border-radius:12px;cursor:pointer;transition:all 0.2s;">
+                  style="display:flex;align-items:center;justify-content:space-between;padding:1rem;background:var(--dark);border:2px solid ${preselectedOpt === 'a' ? 'var(--green)' : 'var(--border)'};border-radius:12px;cursor:pointer;transition:all 0.2s;">
             <div style="display:flex;align-items:center;gap:0.75rem;">
               <div class="radio-circle" style="width:20px;height:20px;border:2px solid ${preselectedOpt === 'a' ? 'var(--green)' : 'var(--white3)'};border-radius:50%;display:flex;align-items:center;justify-content:center;">
                 ${preselectedOpt === 'a' ? '<div style="width:10px;height:10px;background:var(--green);border-radius:50%;"></div>' : ''}
               </div>
-              <span style="font-weight:600;">${escHtml(m.optA)}</span>
+              <span style="font-weight:600;color:var(--white);">${escHtml(m.optA)}</span>
             </div>
             <div style="text-align:right;">
-              <div style="font-size:1.25rem;font-weight:800;color:var(--green);">${m.pctA}%</div>
+              <div style="font-size:1.25rem;font-weight:800;color:var(--green);">${currentMarketProb}%</div>
               <div style="font-size:0.7rem;color:var(--white3);">${oddsA}x payout</div>
             </div>
           </button>
           
           <button class="outcome-btn ${preselectedOpt === 'b' ? 'selected' : ''}" 
-                  onclick="selectOutcome('b', ${100 - m.pctA}, ${oddsB})"
+                  onclick="selectOutcome('b', ${pctB}, ${oddsB})"
                   data-option="b"
-                  style="display:flex;align-items:center;justify-content:space-between;padding:1rem;background:var(--white1);border:2px solid ${preselectedOpt === 'b' ? '#ff5555' : 'transparent'};border-radius:12px;cursor:pointer;transition:all 0.2s;">
+                  style="display:flex;align-items:center;justify-content:space-between;padding:1rem;background:var(--dark);border:2px solid ${preselectedOpt === 'b' ? '#ff5555' : 'var(--border)'};border-radius:12px;cursor:pointer;transition:all 0.2s;">
             <div style="display:flex;align-items:center;gap:0.75rem;">
               <div class="radio-circle" style="width:20px;height:20px;border:2px solid ${preselectedOpt === 'b' ? '#ff5555' : 'var(--white3)'};border-radius:50%;display:flex;align-items:center;justify-content:center;">
                 ${preselectedOpt === 'b' ? '<div style="width:10px;height:10px;background:#ff5555;border-radius:50%;"></div>' : ''}
               </div>
-              <span style="font-weight:600;">${escHtml(m.optB)}</span>
+              <span style="font-weight:600;color:var(--white);">${escHtml(m.optB)}</span>
             </div>
             <div style="text-align:right;">
-              <div style="font-size:1.25rem;font-weight:800;color:#ff5555;">${100 - m.pctA}%</div>
+              <div style="font-size:1.25rem;font-weight:800;color:#ff5555;">${pctB}%</div>
               <div style="font-size:0.7rem;color:var(--white3);">${oddsB}x payout</div>
             </div>
           </button>
@@ -174,18 +181,18 @@ function openVote(marketId, preselectedOpt, e) {
         <div id="potential-winnings-box" style="margin-top:1.5rem;padding:1rem;background:linear-gradient(135deg, rgba(0,255,127,0.1), rgba(0,255,127,0.05));border:1px solid var(--green);border-radius:12px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
             <span style="font-size:0.75rem;color:var(--white3);">Potential Return</span>
-            <span style="font-size:0.75rem;color:var(--green);font-weight:600;" id="payout-multiplier">${preselectedOpt === 'a' ? oddsA : oddsB}x</span>
+            <span style="font-size:0.75rem;color:var(--green);font-weight:600;" id="payout-multiplier">${preselectedOpt ? (preselectedOpt === 'a' ? oddsA : oddsB) : '—'}x</span>
           </div>
-          <div style="font-size:2rem;font-weight:800;color:var(--green);" id="potential-return">+${preselectedOpt === 'a' ? Math.floor(50 * oddsA) : Math.floor(50 * oddsB)}</div>
+          <div style="font-size:2rem;font-weight:800;color:var(--green);" id="potential-return">+${preselectedOpt ? Math.floor(50 * (preselectedOpt === 'a' ? oddsA : oddsB)) : '—'}</div>
           <div style="font-size:0.75rem;color:var(--white3);margin-top:0.25rem;">tokens if you win</div>
         </div>
       </div>
       
       <!-- Footer -->
-      <div style="padding:1.5rem;border-top:1px solid var(--white1);">
+      <div style="padding:1.5rem;border-top:1px solid var(--border);">
         <button id="confirm-vote-btn" onclick="confirmPolymarketVote()" 
                 style="width:100%;padding:1rem;background:var(--green);color:var(--black);border:none;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer;transition:all 0.2s;opacity:${preselectedOpt ? '1' : '0.5'};pointer-events:${preselectedOpt ? 'auto' : 'none'};">
-          Place Prediction
+          ${preselectedOpt ? 'Place Prediction' : 'Select an Outcome'}
         </button>
       </div>
     </div>
@@ -226,39 +233,59 @@ function openVote(marketId, preselectedOpt, e) {
 
 function closePolymarketVoteModal() {
   const modal = document.getElementById('polymarket-vote-modal');
-  if (modal) modal.classList.remove('active');
+  if (modal) {
+    modal.classList.remove('active');
+    setTimeout(() => modal.remove(), 300);
+  }
+  State.selectedVoteOption = null;
+  State.activeMarketId = null;
 }
 
 let currentOdds = 1;
+let currentMarketProb = 50;
 
 function selectOutcome(opt, prob, odds) {
   State.selectedVoteOption = opt;
-  currentOdds = odds;
+  currentOdds = parseFloat(odds);
   
   // Update UI
   document.querySelectorAll('.outcome-btn').forEach(btn => {
     btn.classList.remove('selected');
+    btn.style.borderColor = 'var(--border)';
+    btn.style.background = 'var(--dark)';
     const radio = btn.querySelector('.radio-circle');
-    radio.style.borderColor = 'var(--white3)';
-    radio.innerHTML = '';
+    if (radio) {
+      radio.style.borderColor = 'var(--white3)';
+      radio.innerHTML = '';
+    }
   });
   
   const selectedBtn = document.querySelector(`.outcome-btn[data-option="${opt}"]`);
-  selectedBtn.classList.add('selected');
-  const selectedRadio = selectedBtn.querySelector('.radio-circle');
-  selectedRadio.style.borderColor = opt === 'a' ? 'var(--green)' : '#ff5555';
-  selectedRadio.innerHTML = `<div style="width:10px;height:10px;background:${opt === 'a' ? 'var(--green)' : '#ff5555'};border-radius:50%;"></div>`;
+  if (selectedBtn) {
+    selectedBtn.classList.add('selected');
+    selectedBtn.style.borderColor = opt === 'a' ? 'var(--green)' : '#ff5555';
+    selectedBtn.style.background = opt === 'a' ? 'rgba(0,255,127,0.1)' : 'rgba(255,85,85,0.1)';
+    const selectedRadio = selectedBtn.querySelector('.radio-circle');
+    if (selectedRadio) {
+      selectedRadio.style.borderColor = opt === 'a' ? 'var(--green)' : '#ff5555';
+      selectedRadio.innerHTML = `<div style="width:10px;height:10px;background:${opt === 'a' ? 'var(--green)' : '#ff5555'};border-radius:50%;"></div>`;
+    }
+  }
   
   // Update multiplier display
-  document.getElementById('payout-multiplier').textContent = odds + 'x';
+  const multiplierEl = document.getElementById('payout-multiplier');
+  if (multiplierEl) multiplierEl.textContent = odds + 'x';
   
   // Update potential winnings
   updatePotentialWinnings();
   
   // Enable confirm button
   const confirmBtn = document.getElementById('confirm-vote-btn');
-  confirmBtn.style.opacity = '1';
-  confirmBtn.style.pointerEvents = 'auto';
+  if (confirmBtn) {
+    confirmBtn.style.opacity = '1';
+    confirmBtn.style.pointerEvents = 'auto';
+    confirmBtn.textContent = 'Place Prediction';
+  }
 }
 
 function setAmount(amount) {
@@ -285,12 +312,14 @@ function syncSliderWithInput() {
 function updatePotentialWinnings() {
   const slider = document.getElementById('vote-amount-slider');
   const input = document.getElementById('vote-amount-input');
-  const amount = parseInt(slider.value) || 50;
+  if (!slider || !input) return;
   
+  const amount = parseInt(slider.value) || 50;
   input.value = amount;
   
   const potentialReturn = Math.floor(amount * currentOdds);
-  document.getElementById('potential-return').textContent = '+' + potentialReturn;
+  const returnEl = document.getElementById('potential-return');
+  if (returnEl) returnEl.textContent = '+' + potentialReturn;
 }
 
 function confirmPolymarketVote() {
@@ -299,7 +328,10 @@ function confirmPolymarketVote() {
     return;
   }
 
-  const amount = parseInt(document.getElementById('vote-amount-slider').value, 10);
+  const slider = document.getElementById('vote-amount-slider');
+  if (!slider) return;
+  
+  const amount = parseInt(slider.value, 10);
   if (!amount || amount < 10) { 
     showToast('Minimum stake is 10 tokens', 'yellow'); 
     return; 
@@ -311,6 +343,11 @@ function confirmPolymarketVote() {
 
   const m = [...SAMPLE_MARKETS, ...State.userCreatedMarkets]
     .find(x => x.id === State.activeMarketId);
+  
+  if (!m) {
+    showToast('Market not found', 'red');
+    return;
+  }
 
   const optLabel = State.selectedVoteOption === 'a' ? m.optA : m.optB;
   const potentialWin = Math.floor(amount * currentOdds);
@@ -330,7 +367,49 @@ function confirmPolymarketVote() {
   closePolymarketVoteModal();
   showToast(`${amount} tokens on "${optLabel}" — potential win: ${potentialWin} tokens! 🎯`, 'green');
   
-  if (typeof demoMode !== 'undefined' && !demoMode) saveUserData();
+  // Refresh profile page prediction history if visible
+  const histEl = document.getElementById('prediction-history');
+  if (histEl && typeof renderProfile === 'function') {
+    renderProfile();
+  }
+  
+  if (typeof demoMode !== 'undefined' && !demoMode && typeof saveUserData === 'function') {
+    saveUserData();
+  }
+}
+
+// ── Old Vote Modal (fallback) ─────────────────────────────────────────
+function closeVoteModal() {
+  const modal = document.getElementById('vote-modal');
+  if (modal) modal.classList.remove('open');
+}
+
+function selectVoteOption(opt) {
+  State.selectedVoteOption = opt;
+  document.querySelectorAll('.vote-option').forEach(el => el.classList.remove('selected'));
+  document.getElementById('vote-opt-' + opt).classList.add('selected');
+}
+
+function confirmVote() {
+  if (!State.selectedVoteOption) {
+    showToast('Please select Yes or No', 'yellow');
+    return;
+  }
+  const amount = parseInt(document.getElementById('vote-amount').value, 10);
+  if (!amount || amount < 10) {
+    showToast('Minimum stake is 10 tokens', 'yellow');
+    return;
+  }
+  if (amount > State.userTokens) {
+    showToast('Not enough tokens!', 'red');
+    return;
+  }
+  
+  // Use the polymarket modal instead for better UX
+  closeVoteModal();
+  if (State.activeMarketId) {
+    openVote(State.activeMarketId, State.selectedVoteOption);
+  }
 }
 
 // ── Escape HTML to prevent XSS in dynamic content ────────────────────

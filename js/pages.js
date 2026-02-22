@@ -100,23 +100,26 @@ function buildHomePage() {
       <div class="section-label">Live Markets</div>
       <h2>What's The Crowd Saying?</h2>
       <div class="market-cards">
-        ${SAMPLE_MARKETS.slice(0, 3).map(m => `
-          <div class="market-card" onclick="showPage('markets')">
-            <div class="market-cat">${m.cat}</div>
+        ${SAMPLE_MARKETS.slice(0, 3).map(m => {
+          const pctB = 100 - m.pctA;
+          return `
+          <div class="market-card" onclick="if(State.currentUser){openVote(${m.id},null,event)}else{openAuth()}">
+            <div class="market-cat">${escHtml(m.cat)}</div>
             <h3>${escHtml(m.question)}</h3>
             <div class="odds-bar">
               <div class="odds-fill" style="width:${m.pctA}%"></div>
             </div>
             <div class="odds-labels">
-              <span>Yes ${m.pctA}%</span>
-              <span>No ${100 - m.pctA}%</span>
+              <span>${escHtml(m.optA)} ${m.pctA}%</span>
+              <span>${escHtml(m.optB)} ${pctB}%</span>
             </div>
             <div class="market-meta">
               <span>Ends: ${m.ends}</span>
               <span class="vol">${m.tokens.toLocaleString()} tokens pooled</span>
             </div>
           </div>
-        `).join('')}
+          `;
+        }).join('')}
       </div>
     </div>
 
@@ -185,15 +188,15 @@ function buildCommunityPage() {
         ${SAMPLE_MARKETS.map(m => {
           const pctB = 100 - m.pctA;
           return `
-          <div class="market-card" onclick="openVote(${m.id}, event)">
-            <div class="market-cat">${m.cat}</div>
+          <div class="market-card" onclick="openVote(${m.id}, null, event)">
+            <div class="market-cat">${escHtml(m.cat)}</div>
             <h3>${escHtml(m.question)}</h3>
             <div class="odds-bar">
               <div class="odds-fill" style="width:${m.pctA}%"></div>
             </div>
             <div class="odds-labels">
-              <span>${m.optA} ${m.pctA}%</span>
-              <span>${m.optB} ${pctB}%</span>
+              <span>${escHtml(m.optA)} ${m.pctA}%</span>
+              <span>${escHtml(m.optB)} ${pctB}%</span>
             </div>
             <div class="market-meta">
               <span>Ends: ${m.ends}</span>
@@ -223,6 +226,10 @@ function buildCommunityPage() {
 
 // ── MARKETS PAGE ─────────────────────────────────────────────────────
 function buildMarketsPage() {
+  renderMarketsPageContent();
+}
+
+function renderMarketsPageContent() {
   const hasMarkets = State.userCreatedMarkets && State.userCreatedMarkets.length > 0;
   
   document.getElementById('page-markets').innerHTML = `
@@ -251,23 +258,21 @@ function buildMarketsPage() {
       </button>
     </div>
     
-    <!-- Markets list or empty state -->
+    <!-- Markets list (always present, may be empty) -->
     <div style="max-width:1100px;margin:0 auto;padding:0 2rem;">
-      ${hasMarkets ? `
-        <div id="markets-list" class="markets-list"></div>
-      ` : `
-        <div class="coming-soon-wrap" style="padding:4rem 2rem;">
-          <div class="coming-soon-badge" style="background:var(--green);color:var(--black);">📊</div>
-          <h2>No Markets Yet</h2>
-          <p style="max-width:500px;margin:0 auto 1.5rem;">
-            Create your first prediction market and start building your community of predictors. 
-            It is easy and only takes a minute.
-          </p>
-          <button class="btn btn-primary" onclick="openCreateMarketModal()">
-            Create Your First Market →
-          </button>
-        </div>
-      `}
+      <div id="markets-list" class="markets-list" style="${hasMarkets ? '' : 'display:none'}"></div>
+      
+      <div id="markets-empty-state" class="coming-soon-wrap" style="padding:4rem 2rem;${hasMarkets ? 'display:none' : ''}">
+        <div class="coming-soon-badge" style="background:var(--green);color:var(--black);">📊</div>
+        <h2>No Markets Yet</h2>
+        <p style="max-width:500px;margin:0 auto 1.5rem;">
+          Create your first prediction market and start building your community of predictors. 
+          It is easy and only takes a minute.
+        </p>
+        <button class="btn btn-primary" onclick="openCreateMarketModal()">
+          Create Your First Market →
+        </button>
+      </div>
     </div>
     
     ${buildFooter()}
@@ -433,13 +438,17 @@ function submitCreateMarket() {
   
   closeCreateMarketModal();
   
-  // Re-render markets page if we're on it
-  if (document.getElementById('markets-list')) {
+  // Toggle empty state vs list visibility
+  const listEl = document.getElementById('markets-list');
+  const emptyEl = document.getElementById('markets-empty-state');
+  
+  if (listEl) listEl.style.display = '';
+  if (emptyEl) emptyEl.style.display = 'none';
+  
+  // Re-render markets list
+  if (typeof renderMarkets === 'function') {
     renderMarkets();
   }
-  
-  // Switch to markets page
-  showPage('markets');
   
   // Show success
   setTimeout(() => {

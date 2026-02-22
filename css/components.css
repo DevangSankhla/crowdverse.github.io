@@ -3,6 +3,54 @@
    cards, forms, badges, odds bars, footer…
    ───────────────────────────────────────────── */
 
+/* ── Buttons (Global) ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1.25rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  text-decoration: none;
+  gap: 0.5rem;
+  line-height: 1.2;
+}
+
+.btn-primary {
+  background: var(--green);
+  color: var(--black);
+}
+.btn-primary:hover:not(:disabled) {
+  background: #90ff90;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(127,255,127,0.3);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--white);
+  border: 1px solid var(--border2);
+}
+.btn-ghost:hover:not(:disabled) {
+  background: var(--dark2);
+  border-color: var(--white3);
+}
+
+.btn-lg {
+  padding: 0.85rem 1.75rem;
+  font-size: 1rem;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ── Section Labels ── */
 .section-label {
   font-family: var(--font-mono);

@@ -3,16 +3,38 @@
 // ─────────────────────────────────────────────────────────────────────
 
 /**
- * Show a toast notification at the bottom-right of the screen.
- * @param {string} msg   — message text
- * @param {string} type  — 'green' | 'red' | 'yellow'
+ * Show a toast notification at the bottom of the screen.
+ * @param {string} message — message text
+ * @param {string} color — 'green' | 'red' | 'yellow'
  */
-function showToast(msg, type = 'green') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className   = `toast ${type} show`;
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.classList.remove('show'), 3500);
+function showToast(message, color = 'green') {
+  // Remove existing toast if any
+  const existingToast = document.querySelector('.toast-dynamic');
+  if (existingToast) existingToast.remove();
+  
+  const toast = document.createElement('div');
+  toast.className = 'toast-dynamic';
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    padding: 1rem 1.5rem;
+    background: ${color === 'green' ? 'var(--green)' : color === 'red' ? '#ff5555' : 'var(--yellow)'};
+    color: ${color === 'yellow' ? 'var(--black)' : 'var(--black)'};
+    border-radius: 12px;
+    font-weight: 600;
+    z-index: 10000;
+    animation: slideUp 0.3s ease forwards;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  `;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.style.animation = 'slideDown 0.3s ease forwards';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
 }
 
 /**
@@ -20,10 +42,22 @@ function showToast(msg, type = 'green') {
  */
 function updateTokenDisplay() {
   const fmt = State.userTokens.toLocaleString();
-  document.getElementById('token-nav-count').textContent        = fmt;
-  document.getElementById('profile-token-amount').textContent   = fmt;
-  document.getElementById('vote-balance').textContent           = State.userTokens;
-  document.getElementById('your-lb-score').textContent          = fmt + ' tkn';
+  
+  // Nav badge
+  const badge = document.getElementById('token-nav-count');
+  if (badge) badge.textContent = fmt;
+  
+  // Profile token amount
+  const profileToken = document.getElementById('profile-token-amount');
+  if (profileToken) profileToken.textContent = fmt;
+  
+  // Vote modal balance
+  const voteBalance = document.getElementById('vote-balance');
+  if (voteBalance) voteBalance.textContent = State.userTokens;
+  
+  // Leaderboard score
+  const lbScore = document.getElementById('your-lb-score');
+  if (lbScore) lbScore.textContent = fmt + ' tkn';
 }
 
 /**
@@ -31,9 +65,14 @@ function updateTokenDisplay() {
  */
 function updateNavForAuth() {
   const loggedIn = !!State.currentUser;
-  document.getElementById('nav-login-btn').style.display   = loggedIn ? 'none' : '';
-  document.getElementById('nav-logout-btn').style.display  = loggedIn ? ''     : 'none';
-  document.getElementById('token-nav-badge').style.display = loggedIn ? ''     : 'none';
+  const loginBtn = document.getElementById('nav-login-btn');
+  const logoutBtn = document.getElementById('nav-logout-btn');
+  const tokenBadge = document.getElementById('token-nav-badge');
+  
+  if (loginBtn) loginBtn.style.display = loggedIn ? 'none' : '';
+  if (logoutBtn) logoutBtn.style.display = loggedIn ? '' : 'none';
+  if (tokenBadge) tokenBadge.style.display = loggedIn ? '' : 'none';
+  
   updateTokenDisplay();
 }
 
@@ -69,59 +108,39 @@ function buildFooter() {
  * Close modal when clicking the dark overlay backdrop.
  */
 function initModalBackdropClose() {
-  document.getElementById('auth-modal').addEventListener('click', function(e) {
-    if (e.target === this) closeAuth();
-  });
-  document.getElementById('vote-modal').addEventListener('click', function(e) {
-    if (e.target === this) closeVoteModal();
-  });
-}
-
-// ─────────────────────────────────────────────────────────────────────
-// utils.js — Shared utility functions
-// ─────────────────────────────────────────────────────────────────────
-
-// Update token display in nav
-function updateTokenDisplay() {
-  const badge = document.getElementById('token-nav-count');
-  if (badge) {
-    badge.textContent = State.userTokens;
+  // Auth modal
+  const authModal = document.getElementById('auth-modal');
+  if (authModal) {
+    authModal.addEventListener('click', function(e) {
+      if (e.target === this) closeAuth();
+    });
   }
   
-  // Also update profile token amount if on profile page
-  const profileToken = document.getElementById('profile-token-amount');
-  if (profileToken) {
-    profileToken.textContent = State.userTokens;
+  // Old vote modal (if exists)
+  const voteModal = document.getElementById('vote-modal');
+  if (voteModal) {
+    voteModal.addEventListener('click', function(e) {
+      if (e.target === this) closeVoteModal();
+    });
   }
-}
-
-// Show toast notification
-function showToast(message, color = 'green') {
-  const toast = document.createElement('div');
-  toast.style.cssText = `
-    position: fixed;
-    bottom: 2rem;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 1rem 1.5rem;
-    background: ${color === 'green' ? 'var(--green)' : color === 'red' ? '#ff5555' : 'var(--yellow)'};
-    color: ${color === 'yellow' ? 'var(--black)' : 'var(--black)'};
-    border-radius: 12px;
-    font-weight: 600;
-    z-index: 10000;
-    animation: slideUp 0.3s ease;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-  `;
-  toast.textContent = message;
-  document.body.appendChild(toast);
   
-  setTimeout(() => {
-    toast.style.animation = 'slideDown 0.3s ease';
-    setTimeout(() => toast.remove(), 300);
-  }, 3000);
+  // Setup listener for dynamic modals (delegated)
+  document.addEventListener('click', function(e) {
+    // Close create market modal on backdrop click
+    const createModal = document.getElementById('create-market-modal');
+    if (createModal && e.target === createModal) {
+      closeCreateMarketModal();
+    }
+    
+    // Close polymarket vote modal on backdrop click
+    const pmModal = document.getElementById('polymarket-vote-modal');
+    if (pmModal && e.target === pmModal) {
+      closePolymarketVoteModal();
+    }
+  });
 }
 
-// Add animations
+// Add animation styles for toast
 const toastStyles = document.createElement('style');
 toastStyles.textContent = `
   @keyframes slideUp {
