@@ -239,10 +239,10 @@ function closePolymarketVoteModal() {
   const modal = document.getElementById('polymarket-vote-modal');
   if (modal) {
     modal.classList.remove('active');
-    modal.style.display = 'none';
     setTimeout(() => {
+      modal.style.display = 'none';
       if (modal.parentNode) modal.remove();
-    }, 300);
+    }, 300); // wait for opacity transition to finish
   }
   State.selectedVoteOption = null;
   State.activeMarketId = null;
