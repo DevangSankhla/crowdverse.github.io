@@ -1,0 +1,130 @@
+/* ─────────────────────────────────────────────
+   navbar.css — Top navigation bar
+   ───────────────────────────────────────────── */
+
+.navbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  height: var(--nav-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ── Logo ── */
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.nav-logo-img {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  filter: drop-shadow(0 0 6px rgba(127,255,127,0.4));
+}
+
+.nav-logo-text {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--white);
+  letter-spacing: -0.02em;
+}
+
+/* ── Nav Links ── */
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.nav-link {
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--white2);
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.02em;
+  border: none;
+  background: none;
+}
+.nav-link:hover  { color: var(--white); background: var(--dark2); }
+.nav-link.active { color: var(--green); background: var(--green-glow2); }
+
+/* ── Nav Right Actions ── */
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.token-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.3rem 0.75rem;
+  background: var(--dark2);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--green);
+}
+
+.token-badge .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: pulse 2s infinite;
+}
+
+/* ── Buttons ── */
+.btn {
+  padding: 0.45rem 1.2rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  letter-spacing: 0.02em;
+}
+
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btn-primary {
+  background: var(--green);
+  color: var(--black);
+}
+.btn-primary:hover {
+  background: #9fffbf;
+  box-shadow: 0 0 20px rgba(127,255,127,0.3);
+  transform: translateY(-1px);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--white2);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { color: var(--white); border-color: var(--white3); }
+
+.btn-lg {
+  padding: 0.75rem 2rem;
+  font-size: 0.9rem;
+  border-radius: 8px;
+}
