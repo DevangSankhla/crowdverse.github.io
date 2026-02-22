@@ -20,17 +20,36 @@
 
 /* ── Mobile ── */
 @media (max-width: 640px) {
-  .navbar { padding: 0 1rem; }
-
-  /* Hide nav links on small screens — use bottom or hamburger (future) */
+  /* Navbar: hide desktop links, keep logo + actions */
+  .navbar {
+    padding: 0 1rem;
+    height: 56px;
+  }
   .nav-links { display: none; }
 
-  /* Hide token badge on very small screens */
-  .nav-actions .token-badge { display: none; }
+  /* Token badge: show but condensed */
+  .token-badge {
+    padding: 0.25rem 0.6rem;
+    font-size: 0.72rem;
+  }
 
-  .hero { padding: 3rem 1.25rem; }
-  .hero h1 { font-size: 2.2rem; }
+  /* Hero */
+  .hero {
+    padding: 2.5rem 1.25rem 3rem;
+    min-height: calc(100vh - 56px);
+  }
+  .hero h1 { font-size: 2rem; }
+  .hero p  { font-size: 0.9rem; }
+  .hero-logo { width: 90px; height: 90px; }
+  .hero-actions {
+    flex-direction: column;
+    width: 100%;
+    max-width: 320px;
+  }
+  .hero-actions .btn { width: 100%; justify-content: center; }
+  .hero-badge { font-size: 0.65rem; }
 
+  /* Stats strip */
   .stats-strip { flex-wrap: wrap; }
   .stat-item {
     min-width: 50%;
@@ -38,25 +57,120 @@
   }
   .stat-item:nth-child(even) { border-right: none; }
 
+  /* Market cards */
   .market-cards { grid-template-columns: 1fr; }
-  .rewards-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+  .market-card, .market-card-full {
+    padding: 1.1rem;
+  }
+  .market-card h3, .market-card-full h3 {
+    font-size: 0.95rem;
+  }
 
-  .section { padding: 3rem 1.25rem; }
-  .page-header { padding: 2rem 1.25rem 1.5rem; }
+  /* Vote buttons on market cards: bigger touch targets */
+  .market-card-full button[onclick*="openVote"] {
+    padding: 1rem !important;
+    font-size: 1rem !important;
+  }
 
+  /* Rewards */
+  .rewards-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+
+  /* Section padding */
+  .section { padding: 2.5rem 1.25rem; }
+  .page-header { padding: 1.75rem 1.25rem 1.25rem; }
+  .page-header h1 { font-size: 1.75rem; }
+
+  /* Markets layout */
   .markets-layout,
-  .profile-layout { padding: 1.25rem; }
+  .profile-layout { padding: 1rem; }
 
-  .modal { padding: 1.75rem; }
-  .vote-options { grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+  /* Modal full-screen on mobile */
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .modal {
+    max-width: 100% !important;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important;
+    padding: 1.5rem !important;
+    max-height: 92vh;
+    overflow-y: auto;
+  }
 
+  /* Vote modal: bottom sheet */
+  #polymarket-vote-modal .modal {
+    border-radius: 16px 16px 0 0 !important;
+  }
+
+  /* Profile layout */
+  .profile-layout { gap: 1rem; }
+  .profile-card { padding: 1.25rem; }
+  .token-display .amount { font-size: 1.75rem; }
+
+  /* Footer */
   .footer { padding: 1.5rem 1.25rem; }
   .footer-top { flex-direction: column; gap: 1.25rem; }
+
+  /* Steps grid full width on mobile */
+  .steps-grid { grid-template-columns: 1fr; }
+  .step-card { padding: 1.25rem; }
+
+  /* Admin panel mobile */
+  .admin-markets-filters { gap: 0.35rem; }
+  .admin-filter-btn { padding: 0.45rem 0.7rem; font-size: 0.78rem; }
+
+  /* Category filter buttons on markets page */
+  #market-filters { gap: 0.35rem; }
+  .mkt-filter-btn { padding: 0.4rem 0.65rem; font-size: 0.7rem; }
+
+  /* Toast: centered, wider */
+  .toast-dynamic {
+    left: 1rem !important;
+    right: 1rem !important;
+    width: auto !important;
+    bottom: 80px !important; /* above mobile nav */
+    transform: translateX(0) translateY(100px) !important;
+  }
+
+  /* Page content: no top padding overlap */
+  .page { padding-top: 56px; }
 }
 
 /* ── Very small screens ── */
 @media (max-width: 380px) {
-  .hero h1 { font-size: 1.9rem; }
-  .hero-logo { width: 90px; height: 90px; }
+  .hero h1 { font-size: 1.75rem; }
+  .hero-logo { width: 80px; height: 80px; }
   .stat-item { min-width: 100%; }
+  .modal { padding: 1.25rem !important; }
+}
+
+/* ── Touch improvements (all mobile) ── */
+@media (hover: none) and (pointer: coarse) {
+  .btn { min-height: 44px; }
+  .nav-link, .modal-tab, .vote-btn, .mkt-filter-btn {
+    min-height: 40px;
+  }
+  .market-card { cursor: pointer; }
+  /* Prevent double-tap zoom */
+  button, a { touch-action: manipulation; }
+  /* Bigger close buttons */
+  .modal-close { width: 40px; height: 40px; font-size: 1.4rem; }
+  /* Form inputs: bigger for touch */
+  .form-input, .form-select { font-size: 16px; /* prevents iOS zoom */ padding: 0.75rem 1rem; }
+
+  /* Outcomes in vote modal: bigger tap targets */
+  .outcome-btn { min-height: 60px; }
+}
+
+/* ── Safe area insets (iPhone notch/home indicator) ── */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  #mobile-nav {
+    padding-bottom: env(safe-area-inset-bottom);
+    height: calc(64px + env(safe-area-inset-bottom));
+  }
+  @media (max-width: 640px) {
+    .page, body {
+      padding-bottom: calc(64px + env(safe-area-inset-bottom));
+    }
+  }
 }
