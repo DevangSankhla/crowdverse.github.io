@@ -6,7 +6,10 @@ const State = {
   currentUser:       null,   // Firebase user object (or demo object)
   userTokens:        0,
   userPredictions:   [],     // Array of { marketId, question, option, amount, status }
-  userCreatedMarkets: [],    // Markets created by this user (pending review)
+  userCreatedMarkets: [],    // Markets created by this user (pending review, in-memory)
+
+  // Firestore-fetched live markets (approved by admin)
+  firestoreMarkets:  [],
 
   // Auth tab
   authMode: 'signup',        // 'signup' | 'login'
