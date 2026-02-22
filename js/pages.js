@@ -147,123 +147,267 @@ function buildHomePage() {
 
 // ── COMMUNITY PAGE ────────────────────────────────────────────────────
 function buildCommunityPage() {
+  const totalParticipants = SAMPLE_MARKETS.reduce((acc, m) => acc + Math.floor(m.tokens / 50), 0);
+  const totalVolume = SAMPLE_MARKETS.reduce((acc, m) => acc + m.tokens, 0);
+  
   document.getElementById('page-community').innerHTML = `
-    <div class="coming-soon-wrap">
-      <div class="coming-soon-badge">🤖 AI-Powered</div>
-      <h2>Community Markets</h2>
-      <p>
-        AI-generated prediction panels based on trending topics, news, and crowd signals.
-        Launching very soon — check back!
-      </p>
-      <button class="btn btn-primary btn-lg" onclick="showPage('markets')">
-        Explore User Markets →
-      </button>
+    <div class="page-header">
+      <div class="section-label" style="margin-bottom:0.5rem">Community Polls</div>
+      <h1>Community Predictions</h1>
+      <p>Join the crowd. Predict on trending topics and earn tokens.</p>
     </div>
+    
+    <!-- Stats bar -->
+    <div style="max-width:1100px;margin:0 auto 2rem;padding:0 2rem;">
+      <div class="stats-strip" style="margin:0;">
+        <div class="stat-item">
+          <span class="stat-num">${SAMPLE_MARKETS.length}</span>
+          <span class="stat-label">Active Polls</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-num">${totalVolume.toLocaleString()}</span>
+          <span class="stat-label">Total Volume</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-num">${totalParticipants.toLocaleString()}</span>
+          <span class="stat-label">Participants</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-num">${State.userTokens || 1000}</span>
+          <span class="stat-label">Your Tokens</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Polls grid -->
+    <div style="max-width:1100px;margin:0 auto;padding:0 2rem;">
+      <div class="market-cards">
+        ${SAMPLE_MARKETS.map(m => {
+          const pctB = 100 - m.pctA;
+          return `
+          <div class="market-card" onclick="openVote(${m.id}, event)">
+            <div class="market-cat">${m.cat}</div>
+            <h3>${escHtml(m.question)}</h3>
+            <div class="odds-bar">
+              <div class="odds-fill" style="width:${m.pctA}%"></div>
+            </div>
+            <div class="odds-labels">
+              <span>${m.optA} ${m.pctA}%</span>
+              <span>${m.optB} ${pctB}%</span>
+            </div>
+            <div class="market-meta">
+              <span>Ends: ${m.ends}</span>
+              <span class="vol">${m.tokens.toLocaleString()} tokens pooled</span>
+            </div>
+          </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+    
+    <!-- Create your own CTA -->
+    <div style="max-width:1100px;margin:3rem auto;padding:0 2rem;">
+      <div class="legal-banner" style="background:linear-gradient(135deg, rgba(0,255,127,0.1), rgba(0,255,127,0.05));border-color:var(--green);">
+        <div class="icon">💡</div>
+        <div>
+          <p style="margin-bottom:0.5rem;"><strong>Want to Create Your Own Poll?</strong></p>
+          <p style="margin-bottom:1rem;">Head over to the Markets page to create your own prediction panels and invite others to predict.</p>
+          <button class="btn btn-primary" onclick="showPage('markets')">Create Your Market →</button>
+        </div>
+      </div>
+    </div>
+    
     ${buildFooter()}
   `;
 }
 
 // ── MARKETS PAGE ─────────────────────────────────────────────────────
 function buildMarketsPage() {
-  // Set default end-date to 3 months from today
+  const hasMarkets = State.userCreatedMarkets && State.userCreatedMarkets.length > 0;
+  
+  document.getElementById('page-markets').innerHTML = `
+    <div class="page-header">
+      <div class="section-label" style="margin-bottom:0.5rem">Your Markets</div>
+      <h1>Your Prediction Markets</h1>
+      <p>Create your own prediction markets and invite others to predict.</p>
+    </div>
+    
+    <!-- Info banner -->
+    <div style="max-width:1100px;margin:1rem auto;padding:0 2rem;">
+      <div class="legal-banner" style="background:linear-gradient(135deg, rgba(0,255,127,0.1), rgba(0,255,127,0.05));border-color:var(--green);">
+        <div class="icon">ℹ️</div>
+        <p>
+          <strong>Create Your Own Predictions</strong><br>
+          This is your space to create prediction markets on any topic you are curious about. 
+          Set the question, define the outcomes, and let the community predict.
+        </p>
+      </div>
+    </div>
+    
+    <!-- Create button -->
+    <div style="max-width:1100px;margin:2rem auto;padding:0 2rem;text-align:center;">
+      <button class="btn btn-primary btn-lg" onclick="openCreateMarketModal()">
+        <span style="margin-right:0.5rem;">+</span> Create New Market
+      </button>
+    </div>
+    
+    <!-- Markets list or empty state -->
+    <div style="max-width:1100px;margin:0 auto;padding:0 2rem;">
+      ${hasMarkets ? `
+        <div id="markets-list" class="markets-list"></div>
+      ` : `
+        <div class="coming-soon-wrap" style="padding:4rem 2rem;">
+          <div class="coming-soon-badge" style="background:var(--green);color:var(--black);">📊</div>
+          <h2>No Markets Yet</h2>
+          <p style="max-width:500px;margin:0 auto 1.5rem;">
+            Create your first prediction market and start building your community of predictors. 
+            It is easy and only takes a minute.
+          </p>
+          <button class="btn btn-primary" onclick="openCreateMarketModal()">
+            Create Your First Market →
+          </button>
+        </div>
+      `}
+    </div>
+    
+    ${buildFooter()}
+  `;
+  
+  // Render markets if any exist
+  if (hasMarkets && typeof renderMarkets === 'function') {
+    renderMarkets();
+  }
+}
+
+// ── Create Market Modal ───────────────────────────────────────────────
+function openCreateMarketModal() {
+  // Check if logged in
+  if (!State.currentUser) {
+    openAuth();
+    return;
+  }
+  
+  // Set default end date to 3 months from today
   const future = new Date();
   future.setMonth(future.getMonth() + 3);
   const defaultDate = future.toISOString().split('T')[0];
-
-  document.getElementById('page-markets').innerHTML = `
-    <div class="page-header">
-      <div class="section-label" style="margin-bottom:0.5rem">Prediction Markets</div>
-      <h1>Place Your Predictions</h1>
-      <p>Stake tokens on outcomes. Real-time crowd odds. No real money — ever.</p>
-    </div>
-
-    <!-- No political notice -->
-    <div style="max-width:1100px;margin:1rem auto;padding:0 2rem;">
-      <div class="notice-box">
-        <span>🚫</span>
-        <strong>Political Questions Are Strictly Prohibited.</strong>
-        Markets about elections, political parties, or political figures will be removed
-        immediately and the creator's account may be suspended.
+  
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.id = 'create-market-modal';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:500px;">
+      <button class="modal-close" onclick="closeCreateMarketModal()">✕</button>
+      
+      <h2 style="margin-bottom:0.5rem;">Create New Market</h2>
+      <p style="color:var(--white2);margin-bottom:1.5rem;">Set up your prediction question and let the crowd weigh in.</p>
+      
+      <div class="form-group">
+        <label class="form-label">Market Question</label>
+        <input class="form-input" id="mkt-question" placeholder="e.g., Will it rain tomorrow?">
       </div>
-    </div>
-
-    <div class="markets-layout">
-      <!-- Markets list (left) -->
-      <div class="markets-list" id="markets-list"></div>
-
-      <!-- Create market sidebar (right) -->
-      <div>
-        <div class="create-market-box">
-          <h3>Create a Market</h3>
-          <p class="sub">
-            You must be logged in. You stake a minimum of 100 tokens when creating a market.
-            It goes live after our team reviews it (usually within 24–48 hours).
-          </p>
-
-          <!-- Shown when logged out -->
-          <div id="create-market-login-prompt" class="hidden">
-            <p style="font-size:0.85rem;color:var(--white2);margin-bottom:1rem;">
-              You need an account to create prediction markets.
-            </p>
-            <button class="btn btn-primary w-full" onclick="openAuth()">
-              Sign Up / Log In
-            </button>
-          </div>
-
-          <!-- Shown when logged in -->
-          <div id="create-market-form">
-            <div class="form-group">
-              <label class="form-label">Market Question</label>
-              <input class="form-input" id="mkt-question"
-                     placeholder="e.g. Will India reach the World Cup final in 2026?">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Category</label>
-              <select class="form-select" id="mkt-category">
-                <option value="sports">🏏 Sports</option>
-                <option value="economy">📊 Economy</option>
-                <option value="entertainment">🎬 Entertainment</option>
-                <option value="tech">💻 Technology</option>
-                <option value="climate">🌿 Climate / Environment</option>
-                <option value="other">🔮 Other</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Option A</label>
-              <input class="form-input" id="mkt-option-a" value="Yes" placeholder="Yes / Option A">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Option B</label>
-              <input class="form-input" id="mkt-option-b" value="No" placeholder="No / Option B">
-            </div>
-            <div class="form-group">
-              <label class="form-label">End Date</label>
-              <input class="form-input" id="mkt-end-date" type="date" value="${defaultDate}">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Your Stake (min 100 tokens)</label>
-              <div class="token-input-wrap">
-                <input class="form-input" id="mkt-stake" type="number"
-                       min="100" value="100" style="padding-right:70px">
-                <span class="token-label">TOKENS</span>
-              </div>
-            </div>
-            <div class="no-political">
-              <span>🚫</span>
-              <span>No political questions. Violating this rule results in immediate account suspension.</span>
-            </div>
-            <button class="btn btn-primary w-full" onclick="submitMarket()">
-              Submit for Review
-            </button>
-          </div>
-        </div>
+      
+      <div class="form-group">
+        <label class="form-label">Description (Optional)</label>
+        <textarea class="form-input" id="mkt-description" rows="2" placeholder="Add more context..."></textarea>
       </div>
+      
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select class="form-select" id="mkt-category">
+          <option value="sports">🏏 Sports</option>
+          <option value="economy">📊 Economy</option>
+          <option value="entertainment">🎬 Entertainment</option>
+          <option value="tech">💻 Technology</option>
+          <option value="climate">🌿 Climate</option>
+          <option value="crypto">₿ Crypto</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">End Date</label>
+        <input class="form-input" type="date" id="mkt-enddate" value="${defaultDate}">
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Option A</label>
+        <input class="form-input" id="mkt-option-a" value="Yes" placeholder="Yes">
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Option B</label>
+        <input class="form-input" id="mkt-option-b" value="No" placeholder="No">
+      </div>
+      
+      <div style="background:var(--white1);padding:1rem;border-radius:8px;margin-bottom:1rem;">
+        <p style="font-size:0.85rem;color:var(--white2);margin:0;">
+          <strong style="color:var(--green);">Note:</strong> You will stake 100 tokens to create this market. 
+          It will go live after admin review (usually within 24-48 hours).
+        </p>
+      </div>
+      
+      <button class="btn btn-primary w-full" onclick="submitCreateMarket()">
+        Create Market (100 tokens)
+      </button>
     </div>
-
-    ${buildFooter()}
   `;
+  
+  document.body.appendChild(modal);
+  setTimeout(() => modal.classList.add('active'), 10);
+}
 
-  renderMarkets();
+function closeCreateMarketModal() {
+  const modal = document.getElementById('create-market-modal');
+  if (modal) {
+    modal.classList.remove('active');
+    setTimeout(() => modal.remove(), 300);
+  }
+}
+
+function submitCreateMarket() {
+  const question = document.getElementById('mkt-question').value.trim();
+  const category = document.getElementById('mkt-category').value;
+  const optA = document.getElementById('mkt-option-a').value.trim() || 'Yes';
+  const optB = document.getElementById('mkt-option-b').value.trim() || 'No';
+  const endDate = document.getElementById('mkt-enddate').value;
+  
+  if (!question) {
+    alert('Please enter a market question');
+    return;
+  }
+  
+  // Deduct tokens
+  if (State.userTokens < 100) {
+    alert('You need at least 100 tokens to create a market');
+    return;
+  }
+  
+  State.userTokens -= 100;
+  updateTokenDisplay();
+  
+  // Add to user created markets
+  const newMarket = {
+    id: Date.now(),
+    question: question,
+    cat: category,
+    optA: optA,
+    optB: optB,
+    pctA: 50,
+    tokens: 100,
+    ends: new Date(endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    status: 'pending',
+    createdBy: State.currentUser?.uid || 'demo'
+  };
+  
+  State.userCreatedMarkets.push(newMarket);
+  
+  closeCreateMarketModal();
+  showPage('markets');
+  
+  // Show success message
+  setTimeout(() => {
+    alert('Market created successfully! It will be reviewed and go live within 24-48 hours.');
+  }, 300);
 }
 
 // ── REWARDS PAGE ─────────────────────────────────────────────────────
