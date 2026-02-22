@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CrowdVerse — India's First Prediction Market</title>
+  <link rel="icon" type="image/png" href="assets/logo.jpg">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Manrope:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/navbar.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/pages.css">
+  <link rel="stylesheet" href="css/modal.css">
+  <link rel="stylesheet" href="css/responsive.css">
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+  <!-- ─── NAVBAR ─── -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-logo" onclick="showPage('home')">
+      <img src="assets/logo.jpg" alt="CrowdVerse Logo" class="nav-logo-img">
+      <span class="nav-logo-text">Crowd<span class="accent">Verse</span></span>
+    </div>
+
+    <div class="nav-links">
+      <button class="nav-link active" onclick="showPage('home')"    data-page="home">Home</button>
+      <button class="nav-link"        onclick="showPage('community')" data-page="community">Community</button>
+      <button class="nav-link"        onclick="showPage('markets')"  data-page="markets">Markets</button>
+      <button class="nav-link"        onclick="showPage('rewards')"  data-page="rewards">Rewards</button>
+      <button class="nav-link"        onclick="showPage('profile')"  data-page="profile">Profile</button>
+    </div>
+
+    <div class="nav-actions">
+      <div class="token-badge" id="token-nav-badge" style="display:none">
+        <div class="dot"></div>
+        <span id="token-nav-count">1000</span> tokens
+      </div>
+      <button class="btn btn-ghost" id="nav-logout-btn" onclick="handleLogout()" style="display:none">Logout</button>
+      <button class="btn btn-primary" id="nav-login-btn" onclick="openAuth()">Join Free</button>
+    </div>
+  </nav>
+
+  <!-- ─── PAGES ─── -->
+  <div id="page-home"      class="page active"></div>
+  <div id="page-community" class="page"></div>
+  <div id="page-markets"   class="page"></div>
+  <div id="page-rewards"   class="page"></div>
+  <div id="page-profile"   class="page"></div>
+
+  <!-- ─── AUTH MODAL ─── -->
+  <div class="modal-overlay" id="auth-modal">
+    <div class="modal" id="auth-modal-box">
+      <button class="modal-close" onclick="closeAuth()">✕</button>
+      <div class="modal-logo">
+        <img src="assets/logo.jpg" alt="CrowdVerse">
+        <span class="modal-logo-text">Crowd<span class="accent">Verse</span></span>
+      </div>
+      <div id="auth-form-wrap">
+        <h2 id="auth-title">Create Account</h2>
+        <p class="sub-heading" id="auth-subtitle">Join thousands predicting the future.</p>
+        <div class="modal-tabs">
+          <button class="modal-tab active" id="tab-signup" onclick="switchTab('signup')">Sign Up</button>
+          <button class="modal-tab"        id="tab-login"  onclick="switchTab('login')">Log In</button>
+        </div>
+        <div class="modal-error" id="auth-error"></div>
+        <div id="signup-fields">
+          <div class="form-group">
+            <label class="form-label">Display Name</label>
+            <input class="form-input" id="signup-name" type="text" placeholder="Your username or name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date of Birth</label>
+            <input class="form-input" id="signup-dob" type="date">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input class="form-input" id="auth-email" type="email" placeholder="you@example.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input" id="auth-password" type="password" placeholder="Min 6 characters">
+        </div>
+        <label class="age-check" id="age-check-wrap">
+          <input type="checkbox" id="age-confirm">
+          <div class="age-check-text">
+            I confirm I am <strong>18 years of age or older.</strong> I understand that providing a false age or identity may result in <strong>permanent account deletion with no compensation.</strong> Online KYC will be required when paid features go live.
+          </div>
+        </label>
+        <button class="btn btn-primary w-full" id="auth-submit-btn" onclick="handleAuth()">
+          Create Account &amp; Get 1000 Tokens
+        </button>
+        <p class="disclaimer-small" id="auth-disclaimer">
+          By signing up, you agree that CrowdVerse is a game — not a financial product. Tokens have zero monetary value. This platform does not involve real-money gambling or betting. 18+ only.
+        </p>
+      </div>
+      <div id="auth-success" class="modal-success hidden">
+        <div class="check">✅</div>
+        <h3>You're In!</h3>
+        <p>Your account is live and tokens are ready.</p>
+        <div class="tokens-granted">🎟️ 1,000 Tokens Credited</div>
+        <button class="btn btn-primary w-full" onclick="closeAuth()">Start Predicting →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── VOTE MODAL ─── -->
+  <div class="modal-overlay" id="vote-modal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeVoteModal()">✕</button>
+      <div class="section-label" style="margin-bottom:1rem">Place Prediction</div>
+      <div class="market-question" id="vote-question"></div>
+      <div class="vote-options">
+        <div class="vote-option yes" id="vote-opt-a" onclick="selectVoteOption('a')">Yes</div>
+        <div class="vote-option no"  id="vote-opt-b" onclick="selectVoteOption('b')">No</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Stake Amount</label>
+        <div class="token-input-wrap">
+          <input class="form-input" id="vote-amount" type="number" min="10" value="50" style="padding-right:70px">
+          <span class="token-label">TOKENS</span>
+        </div>
+      </div>
+      <div class="vote-balance-line">
+        Your balance: <span class="text-green" id="vote-balance">1000</span> tokens
+      </div>
+      <button class="btn btn-primary w-full" onclick="confirmVote()">Confirm Prediction</button>
+    </div>
+  </div>
+
+  <!-- ─── TOAST ─── -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ─── SCRIPTS ─── -->
+  <script src="js/config.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/markets.js"></script>
+  <script src="js/pages.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
