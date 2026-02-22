@@ -13,21 +13,19 @@
   align-items: center;
   justify-content: center;
   padding: 1rem;
-}
-.modal-overlay.open,
-.modal-overlay.active { display: flex; }
-
-/* Animation for dynamically created modals */
-.modal-overlay {
   opacity: 0;
   transition: opacity 0.3s ease;
 }
 
+/* Both .open and .active show the overlay at full opacity */
+.modal-overlay.open,
 .modal-overlay.active {
+  display: flex;
   opacity: 1;
 }
 
-.modal-overlay.active .modal {
+.modal-overlay.active .modal,
+.modal-overlay.open .modal {
   animation: modalIn 0.25s ease;
 }
 
