@@ -2,9 +2,40 @@
 // markets.js — Render markets list, create market, vote modal
 // ─────────────────────────────────────────────────────────────────────
 
+// ── Load live markets from Firestore, then render ─────────────────────
+async function loadAndRenderMarkets() {
+  // First render what we already have (instant feedback)
+  renderMarkets();
+
+  if (demoMode || !db) return;
+
+  try {
+    const snap = await db.collection('markets')
+      .where('status', '==', 'live')
+      .orderBy('approvedAt', 'desc')
+      .get();
+
+    const fetched = [];
+    snap.forEach(doc => {
+      fetched.push({ id: doc.id, firestoreId: doc.id, ...doc.data() });
+    });
+    State.firestoreMarkets = fetched;
+
+    // Re-render with the full dataset
+    renderMarkets();
+  } catch (e) {
+    console.warn('Failed to load Firestore markets:', e);
+  }
+}
+
 // ── Render all markets on the Markets page ────────────────────────────
 function renderMarkets() {
-  const allMarkets = [...SAMPLE_MARKETS, ...State.userCreatedMarkets];
+  // Combine: sample markets + admin-approved Firestore markets + user-created (in-memory)
+  const allMarkets = [
+    ...SAMPLE_MARKETS,
+    ...State.firestoreMarkets,
+    ...State.userCreatedMarkets
+  ];
   const list = document.getElementById('markets-list');
   if (!list) return;
   
@@ -239,10 +270,10 @@ function closePolymarketVoteModal() {
   const modal = document.getElementById('polymarket-vote-modal');
   if (modal) {
     modal.classList.remove('active');
+    modal.style.display = 'none';
     setTimeout(() => {
-      modal.style.display = 'none';
       if (modal.parentNode) modal.remove();
-    }, 300); // wait for opacity transition to finish
+    }, 300);
   }
   State.selectedVoteOption = null;
   State.activeMarketId = null;
