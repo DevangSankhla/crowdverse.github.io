@@ -4,14 +4,14 @@
 
 // ── Open / close auth modal ───────────────────────────────────────────
 function openAuth() {
-  document.getElementById('auth-modal').classList.add('open');
+  document.getElementById('auth-modal').classList.add('active');
   document.getElementById('auth-error').style.display = 'none';
   document.getElementById('auth-form-wrap').classList.remove('hidden');
   document.getElementById('auth-success').classList.add('hidden');
 }
 
 function closeAuth() {
-  document.getElementById('auth-modal').classList.remove('open');
+  document.getElementById('auth-modal').classList.remove('active');
 }
 
 // ── Switch between Sign Up / Log In tabs ─────────────────────────────
