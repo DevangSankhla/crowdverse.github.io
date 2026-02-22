@@ -292,6 +292,10 @@ function openCreateMarketModal() {
   future.setMonth(future.getMonth() + 3);
   const defaultDate = future.toISOString().split('T')[0];
   
+  // Remove existing modal if any
+  const existingModal = document.getElementById('create-market-modal');
+  if (existingModal) existingModal.remove();
+  
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
   modal.id = 'create-market-modal';
@@ -303,13 +307,13 @@ function openCreateMarketModal() {
       <p style="color:var(--white2);margin-bottom:1.5rem;">Set up your prediction question and let the crowd weigh in.</p>
       
       <div class="form-group">
-        <label class="form-label">Market Question</label>
-        <input class="form-input" id="mkt-question" placeholder="e.g., Will it rain tomorrow?">
+        <label class="form-label">Market Question *</label>
+        <input class="form-input" id="mkt-question" placeholder="e.g., Will India win the World Cup 2026?">
       </div>
       
       <div class="form-group">
         <label class="form-label">Description (Optional)</label>
-        <textarea class="form-input" id="mkt-description" rows="2" placeholder="Add more context..."></textarea>
+        <textarea class="form-input" id="mkt-description" rows="2" placeholder="Add more context to help predictors..."></textarea>
       </div>
       
       <div class="form-group">
@@ -325,23 +329,23 @@ function openCreateMarketModal() {
       </div>
       
       <div class="form-group">
-        <label class="form-label">End Date</label>
+        <label class="form-label">End Date *</label>
         <input class="form-input" type="date" id="mkt-enddate" value="${defaultDate}">
       </div>
       
       <div class="form-group">
-        <label class="form-label">Option A</label>
+        <label class="form-label">Option A (Yes side)</label>
         <input class="form-input" id="mkt-option-a" value="Yes" placeholder="Yes">
       </div>
       
       <div class="form-group">
-        <label class="form-label">Option B</label>
+        <label class="form-label">Option B (No side)</label>
         <input class="form-input" id="mkt-option-b" value="No" placeholder="No">
       </div>
       
       <div style="background:var(--white1);padding:1rem;border-radius:8px;margin-bottom:1rem;">
         <p style="font-size:0.85rem;color:var(--white2);margin:0;">
-          <strong style="color:var(--green);">Note:</strong> You will stake 100 tokens to create this market. 
+          <strong style="color:var(--green);">Note:</strong> You will stake <strong>100 tokens</strong> to create this market. 
           It will go live after admin review (usually within 24-48 hours).
         </p>
       </div>
@@ -353,7 +357,11 @@ function openCreateMarketModal() {
   `;
   
   document.body.appendChild(modal);
-  setTimeout(() => modal.classList.add('active'), 10);
+  
+  // Trigger animation
+  requestAnimationFrame(() => {
+    modal.classList.add('active');
+  });
 }
 
 function closeCreateMarketModal() {
@@ -371,25 +379,47 @@ function submitCreateMarket() {
   const optB = document.getElementById('mkt-option-b').value.trim() || 'No';
   const endDate = document.getElementById('mkt-enddate').value;
   
+  // Validation
   if (!question) {
-    alert('Please enter a market question');
+    showToast('Please enter a market question', 'yellow');
+    return;
+  }
+  
+  if (question.length < 10) {
+    showToast('Question too short - be more descriptive', 'yellow');
+    return;
+  }
+  
+  if (!endDate) {
+    showToast('Please select an end date', 'yellow');
+    return;
+  }
+  
+  // Check tokens
+  if (State.userTokens < 100) {
+    showToast('You need at least 100 tokens to create a market', 'red');
     return;
   }
   
   // Deduct tokens
-  if (State.userTokens < 100) {
-    alert('You need at least 100 tokens to create a market');
-    return;
-  }
-  
   State.userTokens -= 100;
   updateTokenDisplay();
   
-  // Add to user created markets
+  // Category emoji mapping
+  const catEmojis = {
+    sports: '🏏 Sports',
+    economy: '📊 Economy',
+    entertainment: '🎬 Entertainment',
+    tech: '💻 Technology',
+    climate: '🌿 Climate',
+    crypto: '₿ Crypto'
+  };
+  
+  // Create new market
   const newMarket = {
     id: Date.now(),
     question: question,
-    cat: category,
+    cat: catEmojis[category] || '🔮 Other',
     optA: optA,
     optB: optB,
     pctA: 50,
@@ -402,14 +432,20 @@ function submitCreateMarket() {
   State.userCreatedMarkets.push(newMarket);
   
   closeCreateMarketModal();
+  
+  // Re-render markets page if we're on it
+  if (document.getElementById('markets-list')) {
+    renderMarkets();
+  }
+  
+  // Switch to markets page
   showPage('markets');
   
-  // Show success message
+  // Show success
   setTimeout(() => {
-    alert('Market created successfully! It will be reviewed and go live within 24-48 hours.');
-  }, 300);
+    showToast('Market created! Pending admin review ✅', 'green');
+  }, 400);
 }
-
 // ── REWARDS PAGE ─────────────────────────────────────────────────────
 function buildRewardsPage() {
   const rewardCards = REWARDS.map(r => `
