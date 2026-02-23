@@ -614,20 +614,26 @@ function updatePotentialWinnings() {
   if (returnEl) returnEl.textContent = State.selectedVoteOption ? '+' + potReturn : '—';
 }
 
+// ── Prevent double submission lock ────────────────────────────────────
+let _isSubmittingPrediction = false;
+
 // ── Confirm and submit a prediction — fully persisted ─────────────────
 async function confirmPolymarketVote() {
+  if (_isSubmittingPrediction) { return; } // Prevent double-click
   if (!State.selectedVoteOption) { showToast('Select an outcome first', 'yellow'); return; }
+  
+  _isSubmittingPrediction = true;
 
   const slider = document.getElementById('vote-amount-slider');
-  if (!slider) return;
+  if (!slider) { _isSubmittingPrediction = false; return; }
   const amount = parseInt(slider.value, 10);
-  if (!amount || amount < 10)          { showToast('Minimum stake is 10 tokens', 'yellow'); return; }
-  if (amount > State.userTokens)       { showToast('Not enough tokens!', 'red'); return; }
+  if (!amount || amount < 10)          { _isSubmittingPrediction = false; showToast('Minimum stake is 10 tokens', 'yellow'); return; }
+  if (amount > State.userTokens)       { _isSubmittingPrediction = false; showToast('Not enough tokens!', 'red'); return; }
 
   const m        = findMarketById(String(State.activeMarketId));
-  if (!m) { showToast('Market not found', 'red'); return; }
+  if (!m) { _isSubmittingPrediction = false; showToast('Market not found', 'red'); return; }
 
-  const optLabel    = State.selectedVoteOption === 'a' ? m.optA : m.optB;
+  const optLabel    = State.selectedVoteOption === 'a' ? (m.optA || 'Yes') : (m.optB || 'No');
   
   // Recalculate odds to ensure we have the correct value
   const pctA   = m.pctA || 50;
@@ -636,13 +642,15 @@ async function confirmPolymarketVote() {
   const oddsB  = pctB > 0 ? (100 / pctB) : 2;
   const liveOdds = State.selectedVoteOption === 'a' ? oddsA : oddsB;
   const potentialWin = Math.floor(amount * liveOdds);
+  
+  // Build prediction entry - ensure no undefined values
   const predictionEntry = {
     marketId:    String(State.activeMarketId),
-    question:    m.question,
+    question:    m.question || 'Unknown',
     option:      optLabel,
-    amount,
-    potentialWin,
-    odds:        liveOdds,
+    amount:      amount,
+    potentialWin: potentialWin,
+    odds:        Math.round(liveOdds * 100) / 100, // Round to 2 decimal places
     status:      'pending',
     createdAt:   new Date().toISOString()
   };
@@ -660,52 +668,93 @@ async function confirmPolymarketVote() {
     btn.style.cursor = 'not-allowed';
   }
 
+  console.log('Prediction check:', { demoMode, hasDb: !!db, hasUser: !!State.currentUser, uid: State.currentUser?.uid });
+  
   if (!demoMode && db && State.currentUser) {
     try {
-      // Use a transaction to ensure atomic validation
-      await db.runTransaction(async (transaction) => {
-        const userRef = db.collection('users').doc(State.currentUser.uid);
-        const userDoc = await transaction.get(userRef);
-        
-        if (!userDoc.exists) {
-          throw new Error('User not found');
+      console.log('Submitting prediction to Firestore:', { marketId: State.activeMarketId, amount, option: State.selectedVoteOption });
+      
+      const userRef = db.collection('users').doc(State.currentUser.uid);
+      let userSnap;
+      try {
+        userSnap = await userRef.get();
+      } catch (e) {
+        throw new Error('Cannot read user: ' + e.message);
+      }
+      
+      // Create user doc if it doesn't exist
+      if (!userSnap.exists) {
+        console.log('Creating user document...');
+        try {
+          await userRef.set({
+            tokens: 1000,
+            predictions: [],
+            displayName: State.currentUser.displayName || State.currentUser.email?.split('@')[0] || 'User',
+            email: State.currentUser.email,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } catch (e) {
+          throw new Error('Cannot create user: ' + e.message);
         }
-        
-        const currentTokens = userDoc.data().tokens || 0;
-        if (currentTokens < amount) {
-          throw new Error('Insufficient tokens');
-        }
-        
-        // 1. Add vote to market's votes subcollection
+      }
+      
+      const userData = userSnap.exists ? userSnap.data() : { tokens: 1000 };
+      if ((userData.tokens || 0) < amount) {
+        throw new Error('Insufficient tokens');
+      }
+      
+      // Try writing vote first (separate from batch to isolate errors)
+      try {
         const voteRef = db.collection('markets').doc(State.activeMarketId).collection('votes').doc();
-        transaction.set(voteRef, {
+        await voteRef.set({
           userId:    State.currentUser.uid,
           userName:  State.currentUser.displayName || State.currentUser.email?.split('@')[0] || 'User',
           option:    State.selectedVoteOption,
-          amount,
+          amount:    amount,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-
-        // 2. Atomically deduct tokens & persist prediction in user doc
-        transaction.update(userRef, {
+        console.log('Vote recorded');
+      } catch (e) {
+        throw new Error('Cannot write vote: ' + e.message);
+      }
+      
+      // Update user tokens
+      try {
+        await userRef.update({
           tokens:      firebase.firestore.FieldValue.increment(-amount),
           predictions: firebase.firestore.FieldValue.arrayUnion(predictionEntry)
         });
-
-        // 3. Increment market's denormalised token total
+        console.log('User updated');
+      } catch (e) {
+        throw new Error('Cannot update user: ' + e.message);
+      }
+      
+      // Update market tokens (use set with merge if update fails)
+      try {
         const mktRef = db.collection('markets').doc(State.activeMarketId);
-        transaction.update(mktRef, {
-          tokens: firebase.firestore.FieldValue.increment(amount)
-        });
-      });
+        const mktSnap = await mktRef.get();
+        if (mktSnap.exists) {
+          await mktRef.update({
+            tokens: firebase.firestore.FieldValue.increment(amount)
+          });
+        } else {
+          await mktRef.set({ tokens: amount }, { merge: true });
+        }
+        console.log('Market updated');
+      } catch (e) {
+        throw new Error('Cannot update market: ' + e.message);
+      }
+      
+      console.log('Prediction recorded successfully');
     } catch (e) {
       // Rollback local state on failure
       State.userTokens += amount;
       State.userPredictions.pop();
       console.error('Vote commit failed:', e);
       if (btn) { btn.disabled = false; btn.textContent = 'Place Prediction'; }
-      const msg = e.message === 'Insufficient tokens' ? 'Not enough tokens!' : 'Failed to record prediction — please try again.';
-      showToast(msg, 'red');
+      _isSubmittingPrediction = false;
+      const errorMsg = e.message || e.code || 'Unknown error';
+      showToast('Failed: ' + errorMsg, 'red');
       return;
     }
   }
@@ -723,6 +772,8 @@ async function confirmPolymarketVote() {
     const histEl = document.getElementById('prediction-history');
     if (histEl) renderProfile();
   }
+  
+  _isSubmittingPrediction = false;
 }
 
 // ── Legacy fallback stubs ─────────────────────────────────────────────
