@@ -52,7 +52,7 @@ function isAllowedOrigin(origin) {
 // ── Cloud Function: groqContext ───────────────────────────────────────
 exports.groqContext = onRequest(
   {
-    region: 'asia-south1',
+    region: 'us-central1',
     secrets: [GROQ_KEY],        // grants this function access to the secret
     cors: false,                 // we handle CORS manually below
   },
