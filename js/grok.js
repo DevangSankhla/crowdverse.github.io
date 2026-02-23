@@ -1,53 +1,44 @@
 // ─────────────────────────────────────────────────────────────────────
-// groq.js — AI-powered market context via Groq API
+// groq.js — AI-powered market context via secure Cloud Function proxy
 //           + Attention confirmation overlay before staking tokens
+//
+// The Groq API key lives ONLY in Firebase Cloud Functions config.
+// This file never touches the key — it calls your own backend.
 // ─────────────────────────────────────────────────────────────────────
 
-// ── In-session cache so we don't hammer the API ──────────────────────
+// ── Your Cloud Function URL ───────────────────────────────────────────
+// After deploying, replace this with your real function URL.
+// Format: https://asia-south1-YOUR_PROJECT_ID.cloudfunctions.net/groqContext
+const GROQ_PROXY_URL = 'https://asia-south1-crowdverse-dev1.cloudfunctions.net/groqContext';
+
+// ── In-session cache so we don't re-call for the same market ─────────
 const _groqContextCache = {};
 
-// ── Fetch AI context for a market question ────────────────────────────
+// ── Fetch AI context via the secure proxy ────────────────────────────
 async function fetchMarketContext(marketId, question, category) {
   if (_groqContextCache[marketId]) return _groqContextCache[marketId];
 
-  if (!groqApiKey || groqApiKey === 'YOUR_GROQ_API_KEY') {
-    return null; // Key not set — silently skip
-  }
+  if (!GROQ_PROXY_URL || GROQ_PROXY_URL.includes('YOUR_PROJECT_ID')) return null;
 
   try {
-    const prompt =
-      `You are a concise research briefing assistant for CrowdVerse, an Indian prediction market platform.\n\n` +
-      `The user is about to make a prediction on:\n"${question}"\nCategory: ${category || 'General'}\n\n` +
-      `Write a tight 3-4 sentence briefing covering:\n` +
-      `• Relevant background / context the user should know\n` +
-      `• Key factors or signals that could influence this outcome\n` +
-      `• Any recent trend worth noting (based on your knowledge)\n\n` +
-      `Rules: Be factual and neutral. Never make a direct prediction. ` +
-      `Tailor context to an Indian audience where applicable. Keep it scannable.`;
-
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${groqApiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 220,
-        temperature: 0.25
-      })
+    const res = await fetch(GROQ_PROXY_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ marketId, question, category })
     });
 
-    if (!res.ok) throw new Error(`Groq ${res.status}`);
+    if (!res.ok) {
+      console.warn('Groq proxy returned', res.status);
+      return null;
+    }
+
     const data = await res.json();
-    const text = data.choices?.[0]?.message?.content?.trim();
-    if (text) {
-      _groqContextCache[marketId] = text;
-      return text;
+    if (data.context) {
+      _groqContextCache[marketId] = data.context;
+      return data.context;
     }
   } catch (e) {
-    console.warn('Groq context fetch failed:', e.message);
+    console.warn('Groq proxy fetch failed:', e.message);
   }
   return null;
 }
@@ -57,13 +48,13 @@ async function loadAndInjectContext(marketId, question, category) {
   const panel = document.getElementById('groq-context-panel');
   if (!panel) return;
 
-  // If key not set, hide the panel entirely
-  if (!groqApiKey || groqApiKey === 'YOUR_GROQ_API_KEY') {
+  if (!GROQ_PROXY_URL || GROQ_PROXY_URL.includes('YOUR_PROJECT_ID')) {
     panel.style.display = 'none';
     return;
   }
 
-  // Show loading skeleton
+  // Show loading skeleton immediately
+  panel.style.display = 'block';
   panel.innerHTML = `
     <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem;">
       <span style="font-size:0.95rem;">🤖</span>
@@ -78,7 +69,6 @@ async function loadAndInjectContext(marketId, question, category) {
       <div class="groq-skeleton" style="height:11px;width:80%;"></div>
       <div class="groq-skeleton" style="height:11px;width:88%;"></div>
     </div>`;
-  panel.style.display = 'block';
 
   const context = await fetchMarketContext(marketId, question, category);
 
@@ -102,8 +92,7 @@ async function loadAndInjectContext(marketId, question, category) {
 }
 
 // ── Attention confirmation overlay ────────────────────────────────────
-// Called from confirmPolymarketVote() — returns a Promise<boolean>
-// resolves true if user confirms, false if they cancel
+// Returns a Promise<boolean> — true = confirmed, false = user cancelled
 function showAttentionOverlay(optLabel, amount, potentialWin) {
   return new Promise(resolve => {
     const existing = document.getElementById('attention-overlay');
@@ -138,29 +127,23 @@ function showAttentionOverlay(optLabel, amount, potentialWin) {
         </div>
       </div>
 
-      <!-- Summary row -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:1.25rem;">
         <div style="background:var(--dark);border:1px solid var(--border2);border-radius:8px;
                     padding:0.75rem;text-align:center;">
           <div style="font-size:0.65rem;color:var(--white3);text-transform:uppercase;
                       letter-spacing:0.06em;margin-bottom:0.25rem;">Staking</div>
-          <div style="font-size:1.25rem;font-weight:800;color:var(--yellow);">
-            ${amount}
-          </div>
+          <div style="font-size:1.25rem;font-weight:800;color:var(--yellow);">${amount}</div>
           <div style="font-size:0.65rem;color:var(--white3);">tokens</div>
         </div>
         <div style="background:var(--dark);border:1px solid rgba(127,255,127,0.2);border-radius:8px;
                     padding:0.75rem;text-align:center;">
           <div style="font-size:0.65rem;color:var(--white3);text-transform:uppercase;
                       letter-spacing:0.06em;margin-bottom:0.25rem;">If Correct</div>
-          <div style="font-size:1.25rem;font-weight:800;color:var(--green);">
-            +${potentialWin}
-          </div>
+          <div style="font-size:1.25rem;font-weight:800;color:var(--green);">+${potentialWin}</div>
           <div style="font-size:0.65rem;color:var(--white3);">tokens</div>
         </div>
       </div>
 
-      <!-- Checkbox confirmation -->
       <label id="attention-label"
              style="display:flex;align-items:flex-start;gap:0.75rem;padding:1rem;
                     background:rgba(127,255,127,0.04);border:1px solid rgba(127,255,127,0.15);
@@ -168,34 +151,43 @@ function showAttentionOverlay(optLabel, amount, potentialWin) {
                     transition:border-color 0.2s;">
         <input type="checkbox" id="attention-check"
                style="width:18px;height:18px;accent-color:var(--green);flex-shrink:0;margin-top:1px;cursor:pointer;"
-               onchange="document.getElementById('attention-confirm-btn').disabled = !this.checked;
-                         document.getElementById('attention-confirm-btn').style.opacity = this.checked ? '1' : '0.4';
-                         document.getElementById('attention-label').style.borderColor = this.checked ? 'rgba(127,255,127,0.5)' : 'rgba(127,255,127,0.15)';">
+               onchange="
+                 const btn = document.getElementById('attention-confirm-btn');
+                 const lbl = document.getElementById('attention-label');
+                 btn.disabled = !this.checked;
+                 btn.style.opacity = this.checked ? '1' : '0.4';
+                 btn.style.cursor  = this.checked ? 'pointer' : 'not-allowed';
+                 lbl.style.borderColor = this.checked ? 'rgba(127,255,127,0.5)' : 'rgba(127,255,127,0.15)';
+               ">
         <span style="font-size:0.8rem;color:var(--white2);line-height:1.55;">
-          I have read the available market context, understand the risks of losing these tokens,
-          and I am making an <strong style="color:var(--white);">educated prediction</strong>
-          based on my own research and judgement.
+          I have reviewed the available market information, I understand that staked tokens
+          can be lost, and I am placing this prediction based on my own
+          <strong style="color:var(--white);">research and informed judgement.</strong>
         </span>
       </label>
 
-      <!-- Disclaimer -->
       <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--white3);
                   text-align:center;margin-bottom:1.25rem;line-height:1.5;">
-        Tokens have no monetary value. This is a skill-based prediction game. 18+ only.
+        CrowdVerse tokens have no monetary value.<br>
+        This is a skill-based prediction game. 18+ only.
       </div>
 
-      <!-- Action buttons -->
       <div style="display:flex;gap:0.6rem;">
-        <button onclick="document.getElementById('attention-overlay').remove();
-                         window._attentionResolve && window._attentionResolve(false);"
-                style="flex:1;padding:0.8rem;background:transparent;border:1px solid var(--border2);
-                       border-radius:8px;color:var(--white3);font-size:0.875rem;cursor:pointer;">
-          Go Back
+        <button onclick="
+                  document.getElementById('attention-overlay').remove();
+                  window._attentionResolve && window._attentionResolve(false);"
+                style="flex:1;padding:0.8rem;background:transparent;
+                       border:1px solid var(--border2);border-radius:8px;
+                       color:var(--white3);font-size:0.875rem;cursor:pointer;transition:all 0.2s;"
+                onmouseover="this.style.borderColor='var(--white3)';this.style.color='var(--white)'"
+                onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--white3)'">
+          ← Go Back
         </button>
         <button id="attention-confirm-btn"
                 disabled
-                onclick="document.getElementById('attention-overlay').remove();
-                         window._attentionResolve && window._attentionResolve(true);"
+                onclick="
+                  document.getElementById('attention-overlay').remove();
+                  window._attentionResolve && window._attentionResolve(true);"
                 style="flex:2;padding:0.8rem;background:var(--green);color:var(--black);
                        border:none;border-radius:8px;font-size:0.875rem;font-weight:700;
                        cursor:not-allowed;opacity:0.4;transition:all 0.2s;">
@@ -204,10 +196,8 @@ function showAttentionOverlay(optLabel, amount, potentialWin) {
       </div>
     `;
 
-    // Store resolve so inline onclick handlers can call it
     window._attentionResolve = resolve;
 
-    // Mount inside the modal so it inherits border-radius
     const modal = document.querySelector('#polymarket-vote-modal .modal');
     if (modal) {
       modal.style.position = 'relative';
@@ -218,34 +208,34 @@ function showAttentionOverlay(optLabel, amount, potentialWin) {
   });
 }
 
-// ── Inject required CSS for groq panel ───────────────────────────────
+// ── Inject CSS ────────────────────────────────────────────────────────
 (function injectGroqStyles() {
   if (document.getElementById('groq-styles')) return;
   const s = document.createElement('style');
   s.id = 'groq-styles';
   s.textContent = `
     #groq-context-panel {
-      margin: 0 1.5rem 0;
+      margin: 0 1.5rem;
       padding: 0.9rem 1rem;
       background: rgba(127,255,127,0.035);
       border: 1px solid rgba(127,255,127,0.12);
       border-radius: 10px;
     }
-
     .groq-skeleton {
-      background: linear-gradient(90deg, var(--white1) 25%, var(--dark2) 50%, var(--white1) 75%);
+      background: linear-gradient(
+        90deg, var(--white1) 25%, var(--dark2) 50%, var(--white1) 75%
+      );
       background-size: 200% 100%;
       animation: groqShimmer 1.4s infinite;
       border-radius: 4px;
+      margin-bottom: 5px;
     }
-
     @keyframes groqShimmer {
       0%   { background-position: 200% 0; }
       100% { background-position: -200% 0; }
     }
-
     @keyframes attentionIn {
-      from { opacity: 0; transform: translateY(12px); }
+      from { opacity: 0; transform: translateY(14px); }
       to   { opacity: 1; transform: translateY(0); }
     }
   `;
