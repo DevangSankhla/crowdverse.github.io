@@ -2,60 +2,165 @@
 // markets.js — Render markets list, create market, vote modal
 // ─────────────────────────────────────────────────────────────────────
 
+// ── Real-time unsubscribe functions ───────────────────────────────────
+let _marketsUnsubscribe = null;
+let _marketVotesUnsubscribe = {};
+
 // ── Helper: find a market by id across ALL sources ────────────────────
 function findMarketById(marketId) {
-  // Normalise to string for safe comparison
   const id = String(marketId);
   const all = [
-    ...SAMPLE_MARKETS.map(m => ({ ...m, id: String(m.id) })),
     ...State.firestoreMarkets.map(m => ({ ...m, id: String(m.firestoreId || m.id) })),
     ...State.userCreatedMarkets.map(m => ({ ...m, id: String(m.firestoreId || m.id) }))
   ];
   return all.find(m => m.id === id) || null;
 }
 
+// ── Start real-time listener for live markets ─────────────────────────
+function startMarketsListener() {
+  if (demoMode || !db) return;
+  
+  // Unsubscribe from previous listener if exists
+  if (_marketsUnsubscribe) {
+    _marketsUnsubscribe();
+  }
+  
+  // Listen to live and approved markets
+  _marketsUnsubscribe = db.collection('markets')
+    .where('status', 'in', ['live', 'approved'])
+    .onSnapshot(snapshot => {
+      const markets = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        markets.push({
+          id: doc.id,
+          firestoreId: doc.id,
+          ...data,
+          status: 'live'
+        });
+      });
+      
+      // Sort by created/approved time
+      markets.sort((a, b) => {
+        const tA = a.approvedAt?.seconds || a.createdAt?.seconds || 0;
+        const tB = b.approvedAt?.seconds || b.createdAt?.seconds || 0;
+        return tB - tA;
+      });
+      
+      State.firestoreMarkets = markets;
+      renderMarkets(_currentMarketFilter);
+      
+      // Update home and community pages
+      if (typeof updateHomeMarketsPreview === 'function') updateHomeMarketsPreview();
+      if (typeof updateCommunityPage === 'function') updateCommunityPage();
+      
+      // Start listeners for vote counts on each market
+      markets.forEach(m => {
+        startMarketVotesListener(m.firestoreId);
+      });
+    }, err => {
+      console.warn('Markets listener error:', err);
+    });
+}
+
+// ── Start real-time listener for vote counts on a specific market ─────
+function startMarketVotesListener(marketId) {
+  if (demoMode || !db) return;
+  
+  // Unsubscribe from previous listener for this market
+  if (_marketVotesUnsubscribe[marketId]) {
+    _marketVotesUnsubscribe[marketId]();
+  }
+  
+  _marketVotesUnsubscribe[marketId] = db.collection('markets')
+    .doc(marketId)
+    .collection('votes')
+    .onSnapshot(snapshot => {
+      let tokensA = 0;
+      let tokensB = 0;
+      let voteCount = 0;
+      
+      snapshot.forEach(doc => {
+        const vote = doc.data();
+        voteCount++;
+        if (vote.option === 'a') {
+          tokensA += vote.amount || 0;
+        } else if (vote.option === 'b') {
+          tokensB += vote.amount || 0;
+        }
+      });
+      
+      // Update the market in state
+      const market = State.firestoreMarkets.find(m => m.firestoreId === marketId);
+      if (market) {
+        market.tokensA = tokensA;
+        market.tokensB = tokensB;
+        market.totalTokens = tokensA + tokensB;
+        market.voteCount = voteCount;
+        
+        // Calculate percentage based on token distribution
+        if (market.totalTokens > 0) {
+          market.pctA = Math.round((tokensA / market.totalTokens) * 100);
+        } else {
+          market.pctA = 50;
+        }
+        
+        // Re-render if this market is visible
+        renderMarkets(_currentMarketFilter);
+        
+        // Update home and community pages
+        if (typeof updateHomeMarketsPreview === 'function') updateHomeMarketsPreview();
+        if (typeof updateCommunityPage === 'function') updateCommunityPage();
+        
+        // Update modal if open for this market
+        if (State.activeMarketId === marketId) {
+          updateVoteModalOdds(market);
+        }
+      }
+    }, err => {
+      console.warn(`Votes listener error for ${marketId}:`, err);
+    });
+}
+
+// ── Update vote modal with new odds ───────────────────────────────────
+function updateVoteModalOdds(market) {
+  const pctA = market.pctA || 50;
+  const pctB = 100 - pctA;
+  const oddsA = pctA > 0 ? (100 / pctA).toFixed(2) : '∞';
+  const oddsB = pctB > 0 ? (100 / pctB).toFixed(2) : '∞';
+  
+  // Update the outcome buttons if they exist
+  const btnA = document.querySelector('.outcome-btn[data-option="a"]');
+  const btnB = document.querySelector('.outcome-btn[data-option="b"]');
+  
+  if (btnA) {
+    const pctEl = btnA.querySelector('[style*="font-size:1.2rem"]');
+    const oddsEl = btnA.querySelector('[style*="font-size:0.68rem"]');
+    if (pctEl) pctEl.textContent = pctA + '%';
+    if (oddsEl) oddsEl.textContent = oddsA + 'x payout';
+  }
+  
+  if (btnB) {
+    const pctEl = btnB.querySelector('[style*="font-size:1.2rem"]');
+    const oddsEl = btnB.querySelector('[style*="font-size:0.68rem"]');
+    if (pctEl) pctEl.textContent = pctB + '%';
+    if (oddsEl) oddsEl.textContent = oddsB + 'x payout';
+  }
+  
+  // Update multiplier if an option is selected
+  const mulEl = document.getElementById('payout-multiplier');
+  if (mulEl && State.selectedVoteOption) {
+    const odds = State.selectedVoteOption === 'a' ? oddsA : oddsB;
+    mulEl.textContent = odds + 'x';
+    currentOdds = parseFloat(odds);
+    updatePotentialWinnings();
+  }
+}
+
 // ── Load live markets from Firestore, then render ─────────────────────
 async function loadAndRenderMarkets() {
-  renderMarkets(); // instant render with seed data
-
-  if (demoMode || !db) return;
-
-  const fetched = [];
-
-  try {
-    const snapLive = await db.collection('markets')
-      .where('status', '==', 'live')
-      .get();
-    snapLive.forEach(doc => {
-      fetched.push({ id: doc.id, firestoreId: doc.id, ...doc.data(), status: 'live' });
-    });
-  } catch (e) { console.warn('Failed to fetch live markets:', e); }
-
-  try {
-    const snapApproved = await db.collection('markets')
-      .where('status', '==', 'approved')
-      .get();
-    snapApproved.forEach(doc => {
-      fetched.push({ id: doc.id, firestoreId: doc.id, ...doc.data(), status: 'live' });
-    });
-  } catch (e) { console.warn('Failed to fetch approved markets:', e); }
-
-  // Deduplicate
-  const seen = new Set();
-  const unique = fetched.filter(m => {
-    const k = m.firestoreId;
-    if (seen.has(k)) return false;
-    seen.add(k);
-    return true;
-  });
-
-  unique.sort((a, b) => {
-    const tA = a.approvedAt?.seconds || a.createdAt?.seconds || 0;
-    const tB = b.approvedAt?.seconds || b.createdAt?.seconds || 0;
-    return tB - tA;
-  });
-
-  State.firestoreMarkets = unique;
+  // Start real-time listener instead of one-time fetch
+  startMarketsListener();
   renderMarkets();
 }
 
@@ -69,11 +174,11 @@ function renderMarkets(filter = 'all') {
   list.style.display = '';
   if (emptyEl) emptyEl.style.display = 'none';
 
-  // Combine all non-rejected sources
+  // Combine all non-rejected sources (only Firestore markets now)
   const firestoreMarkets = (State.firestoreMarkets || []).filter(m => m.status !== 'rejected');
   const userMarkets = (State.userCreatedMarkets || []).filter(m => m.status !== 'rejected');
 
-  let allMarkets = [...SAMPLE_MARKETS, ...firestoreMarkets, ...userMarkets];
+  let allMarkets = [...firestoreMarkets, ...userMarkets];
 
   // Apply category filter
   if (filter && filter !== 'all') {
@@ -83,7 +188,7 @@ function renderMarkets(filter = 'all') {
     });
   }
 
-  // Sort: newest first (firestore markets by approval time, others by creation)
+  // Sort: newest first
   allMarkets.sort((a, b) => {
     const getTime = m => {
       if (m.approvedAt?.seconds) return m.approvedAt.seconds * 1000;
@@ -99,14 +204,16 @@ function renderMarkets(filter = 'all') {
   if (allMarkets.length === 0) {
     list.innerHTML = `
       <div style="text-align:center;padding:4rem 2rem;color:var(--white3);font-family:var(--font-mono);font-size:0.85rem;">
-        No markets found for this filter.
+        ${demoMode ? 'Demo mode: No markets available. Create one to get started!' : 'No markets available yet. Check back soon or create your own!'}
       </div>`;
     return;
   }
 
   list.innerHTML = '';
   allMarkets.forEach(m => {
-    const pctB = 100 - (m.pctA || 50);
+    const pctA = m.pctA || 50;
+    const pctB = 100 - pctA;
+    const totalTokens = m.totalTokens || m.tokens || 0;
     const marketId = String(m.firestoreId || m.id);
     const isLive = m.status === 'live';
     const isUserOwned = !!m.createdBy;
@@ -142,11 +249,11 @@ function renderMarkets(filter = 'all') {
       <!-- Probability bar -->
       <div style="display:flex;align-items:center;gap:0.75rem;margin:1rem 0;">
         <div style="text-align:center;min-width:52px;">
-          <div style="font-size:1.4rem;font-weight:800;color:var(--green);line-height:1;">${m.pctA}%</div>
+          <div style="font-size:1.4rem;font-weight:800;color:var(--green);line-height:1;">${pctA}%</div>
           <div style="font-size:0.7rem;color:var(--white3);margin-top:2px;">${escHtml(m.optA || 'Yes')}</div>
         </div>
         <div style="flex:1;height:10px;background:var(--white1);border-radius:5px;overflow:hidden;position:relative;">
-          <div style="position:absolute;left:0;top:0;height:100%;width:${m.pctA}%;background:var(--green);transition:width 0.4s;"></div>
+          <div style="position:absolute;left:0;top:0;height:100%;width:${pctA}%;background:var(--green);transition:width 0.4s;"></div>
           <div style="position:absolute;right:0;top:0;height:100%;width:${pctB}%;background:#ff5555;transition:width 0.4s;"></div>
         </div>
         <div style="text-align:center;min-width:52px;">
@@ -158,7 +265,7 @@ function renderMarkets(filter = 'all') {
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.75rem;
                   font-family:var(--font-mono);font-size:0.72rem;color:var(--white3);flex-wrap:wrap;gap:0.5rem;">
         <span>📅 Ends: ${escHtml(String(m.ends || '—'))}</span>
-        <span style="color:var(--green-dim);">🎟️ ${(m.tokens || 0).toLocaleString()} pooled</span>
+        <span style="color:var(--green-dim);">🎟️ ${totalTokens.toLocaleString()} pooled</span>
       </div>
 
       ${creatorName ? `
@@ -200,12 +307,9 @@ function renderMarkets(filter = 'all') {
   });
 }
 
-// ── View a user's public profile (from market card) ───────────────────
+// ── View a user's public profile ──────────────────────────────────────
 function viewUserProfile(uid, name) {
-  // For now, show a toast. Could expand to a modal or page navigation.
   showToast(`👤 Viewing ${name}'s profile…`, 'green');
-  // If you want to navigate to a profile page for that user:
-  // showPage('profile') + load their data — stub for now
 }
 
 // ── Polymarket-style Vote Modal ───────────────────────────────────────
@@ -216,7 +320,6 @@ function openVote(marketId, preselectedOpt, e) {
   const id = String(marketId);
   const m = findMarketById(id);
   if (!m) {
-    // Might be a firestore market not yet loaded — try fetching
     if (!demoMode && db) fetchAndShowMarketModal(id);
     else showToast('Market not found', 'red');
     return;
@@ -238,13 +341,13 @@ function openVote(marketId, preselectedOpt, e) {
   const pctB = 100 - pctA;
   const oddsA = pctA > 0 ? (100 / pctA).toFixed(2) : '∞';
   const oddsB = pctB > 0 ? (100 / pctB).toFixed(2) : '∞';
+  const totalTokens = m.totalTokens || m.tokens || 0;
 
   currentOdds = preselectedOpt === 'a' ? parseFloat(oddsA)
               : preselectedOpt === 'b' ? parseFloat(oddsB)
               : 1;
   currentMarketProb = pctA;
 
-  // Create / reuse modal element
   let modal = document.getElementById('polymarket-vote-modal');
   if (!modal) {
     modal = document.createElement('div');
@@ -267,7 +370,7 @@ function openVote(marketId, preselectedOpt, e) {
                          padding:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;
                          border-radius:50%;flex-shrink:0;">✕</button>
         </div>
-        <div style="margin-top:0.5rem;font-size:0.78rem;color:var(--white3);">Ends: ${escHtml(String(m.ends || '—'))}</div>
+        <div style="margin-top:0.5rem;font-size:0.78rem;color:var(--white3);">Ends: ${escHtml(String(m.ends || '—'))} · ${totalTokens.toLocaleString()} tokens pooled</div>
       </div>
 
       <!-- Outcome + Amount -->
@@ -408,6 +511,17 @@ function closePolymarketVoteModal() {
 let currentOdds = 1;
 let currentMarketProb = 50;
 
+function scrollToConfirmButton() {
+  if (window.innerWidth <= 640) {
+    setTimeout(() => {
+      const btn = document.getElementById('confirm-vote-btn');
+      if (btn) {
+        btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 100);
+  }
+}
+
 function selectOutcome(opt, prob, odds) {
   State.selectedVoteOption = opt;
   currentOdds = parseFloat(odds);
@@ -444,7 +558,6 @@ function selectOutcome(opt, prob, odds) {
     btn.textContent = 'Place Prediction';
   }
   
-  // Scroll to confirm button after selecting outcome
   scrollToConfirmButton();
 }
 
@@ -456,7 +569,6 @@ function setAmount(amount) {
   slider.value = valid;
   input.value = valid;
   updatePotentialWinnings();
-  // Scroll to confirm button after setting amount
   scrollToConfirmButton();
 }
 
@@ -469,20 +581,7 @@ function syncSliderWithInput() {
   slider.value = val;
   input.value = val;
   updatePotentialWinnings();
-  // Scroll to confirm button after input change
   scrollToConfirmButton();
-}
-
-function scrollToConfirmButton() {
-  // On mobile, scroll the button into view after a short delay
-  if (window.innerWidth <= 640) {
-    setTimeout(() => {
-      const btn = document.getElementById('confirm-vote-btn');
-      if (btn) {
-        btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
-    }, 100);
-  }
 }
 
 function updatePotentialWinnings() {
@@ -494,12 +593,10 @@ function updatePotentialWinnings() {
   const potentialReturn = Math.floor(amount * currentOdds);
   const returnEl = document.getElementById('potential-return');
   if (returnEl) returnEl.textContent = State.selectedVoteOption ? '+' + potentialReturn : '—';
-  
-  // Scroll to confirm button so it's visible after adjusting amount
   scrollToConfirmButton();
 }
 
-function confirmPolymarketVote() {
+async function confirmPolymarketVote() {
   if (!State.selectedVoteOption) { showToast('Select an outcome first', 'yellow'); return; }
 
   const slider = document.getElementById('vote-amount-slider');
@@ -514,7 +611,10 @@ function confirmPolymarketVote() {
   const optLabel = State.selectedVoteOption === 'a' ? m.optA : m.optB;
   const potentialWin = Math.floor(amount * currentOdds);
 
+  // Deduct tokens locally
   State.userTokens -= amount;
+  
+  // Add to user's predictions
   State.userPredictions.push({
     marketId: State.activeMarketId,
     question: m.question,
@@ -524,6 +624,33 @@ function confirmPolymarketVote() {
     odds: currentOdds,
     status: 'pending'
   });
+
+  // Save vote to Firestore if not in demo mode
+  if (!demoMode && db && State.currentUser) {
+    try {
+      // Add vote to the market's votes subcollection
+      await db.collection('markets').doc(State.activeMarketId).collection('votes').add({
+        userId: State.currentUser.uid,
+        userName: State.currentUser.displayName || State.currentUser.email?.split('@')[0] || 'User',
+        option: State.selectedVoteOption,
+        amount: amount,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      
+      // Update user's tokens
+      await db.collection('users').doc(State.currentUser.uid).update({
+        tokens: State.userTokens
+      });
+      
+      // Update market total tokens (denormalized for quick reads)
+      await db.collection('markets').doc(State.activeMarketId).update({
+        tokens: firebase.firestore.FieldValue.increment(amount)
+      });
+    } catch (e) {
+      console.error('Failed to save vote:', e);
+      showToast('Vote recorded locally but sync failed', 'yellow');
+    }
+  }
 
   updateTokenDisplay();
   closePolymarketVoteModal();

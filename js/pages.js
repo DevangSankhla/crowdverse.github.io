@@ -96,40 +96,15 @@ function buildHomePage() {
       </div>
     </div>
 
-    <!-- Sample Markets Preview -->
+    <!-- Live Markets Preview -->
     <div class="section" style="padding-top:0">
       <div class="section-label">Live Markets</div>
       <h2>What's The Crowd Saying?</h2>
-      <div class="market-cards">
-        ${SAMPLE_MARKETS.slice(0, 3).map(m => {
-          const pctB = 100 - m.pctA;
-          const marketId = String(m.firestoreId || m.id);
-          return `
-          <div class="market-card" data-market-id="${marketId}"
-               onclick="if(event.target.closest('.share-btn')) return; if(State.currentUser){openVote('${marketId}',null,event)}else{openAuth()}">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
-              <div class="market-cat">${escHtml(m.cat)}</div>
-              <button class="share-btn"
-                      onclick="event.stopPropagation();shareMarket('${marketId}','${escHtml(m.question).replace(/'/g,"\\'")}','markets')"
-                      style="background:var(--white1);border:none;border-radius:50%;width:32px;height:32px;
-                             cursor:pointer;display:flex;align-items:center;justify-content:center;
-                             transition:all 0.2s;font-size:0.9rem;"
-                      title="Share this prediction"
-                      onmouseover="this.style.background='var(--green)'"
-                      onmouseout="this.style.background='var(--white1)'">🔗</button>
-            </div>
-            <h3>${escHtml(m.question)}</h3>
-            <div class="odds-bar"><div class="odds-fill" style="width:${m.pctA}%"></div></div>
-            <div class="odds-labels">
-              <span>${escHtml(m.optA)} ${m.pctA}%</span>
-              <span>${escHtml(m.optB)} ${pctB}%</span>
-            </div>
-            <div class="market-meta">
-              <span>Ends: ${m.ends}</span>
-              <span class="vol">${m.tokens.toLocaleString()} tokens pooled</span>
-            </div>
-          </div>`;
-        }).join('')}
+      <div class="market-cards" id="home-markets-preview">
+        <!-- Markets will be loaded dynamically -->
+        <div style="text-align:center;padding:3rem 2rem;color:var(--white3);font-family:var(--font-mono);font-size:0.85rem;grid-column:1/-1;">
+          Loading markets...
+        </div>
       </div>
       <div style="text-align:center;margin-top:2rem;">
         <button class="btn btn-ghost btn-lg" onclick="showPage('markets')">View All Markets →</button>
@@ -190,9 +165,6 @@ function updateHeroCta() {
 
 // ── COMMUNITY PAGE ────────────────────────────────────────────────────
 function buildCommunityPage() {
-  const totalParticipants = SAMPLE_MARKETS.reduce((acc, m) => acc + Math.floor(m.tokens / 50), 0);
-  const totalVolume = SAMPLE_MARKETS.reduce((acc, m) => acc + m.tokens, 0);
-
   document.getElementById('page-community').innerHTML = `
     <div class="page-header">
       <div class="section-label" style="margin-bottom:0.5rem">Community Polls</div>
@@ -201,17 +173,17 @@ function buildCommunityPage() {
     </div>
 
     <div style="max-width:1100px;margin:0 auto 2rem;padding:0 2rem;">
-      <div class="stats-strip" style="margin:0;">
+      <div class="stats-strip" style="margin:0;" id="community-stats">
         <div class="stat-item">
-          <span class="stat-num">${SAMPLE_MARKETS.length}</span>
+          <span class="stat-num" id="community-active-polls">—</span>
           <span class="stat-label">Active Polls</span>
         </div>
         <div class="stat-item">
-          <span class="stat-num">${totalVolume.toLocaleString()}</span>
+          <span class="stat-num" id="community-total-volume">—</span>
           <span class="stat-label">Total Volume</span>
         </div>
         <div class="stat-item">
-          <span class="stat-num">${totalParticipants.toLocaleString()}</span>
+          <span class="stat-num" id="community-participants">—</span>
           <span class="stat-label">Participants</span>
         </div>
         <div class="stat-item">
@@ -221,38 +193,12 @@ function buildCommunityPage() {
       </div>
     </div>
 
-    <!-- Community polls grid — SAMPLE_MARKETS only, NOT user-created markets -->
+    <!-- Community polls grid -->
     <div style="max-width:1100px;margin:0 auto;padding:0 2rem;">
-      <div class="market-cards">
-        ${SAMPLE_MARKETS.map(m => {
-          const pctB = 100 - m.pctA;
-          const marketId = String(m.firestoreId || m.id);
-          return `
-          <div class="market-card" data-market-id="${marketId}"
-               onclick="if(event.target.closest('.share-btn')) return; if(State.currentUser){openVote('${marketId}',null,event)}else{openAuth()}">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
-              <div class="market-cat">${escHtml(m.cat)}</div>
-              <button class="share-btn"
-                      onclick="event.stopPropagation();shareMarket('${marketId}','${escHtml(m.question).replace(/'/g,"\\'")}','community')"
-                      style="background:var(--white1);border:none;border-radius:50%;width:32px;height:32px;
-                             cursor:pointer;display:flex;align-items:center;justify-content:center;
-                             transition:all 0.2s;font-size:0.9rem;"
-                      title="Share"
-                      onmouseover="this.style.background='var(--green)'"
-                      onmouseout="this.style.background='var(--white1)'">🔗</button>
-            </div>
-            <h3>${escHtml(m.question)}</h3>
-            <div class="odds-bar"><div class="odds-fill" style="width:${m.pctA}%"></div></div>
-            <div class="odds-labels">
-              <span>${escHtml(m.optA)} ${m.pctA}%</span>
-              <span>${escHtml(m.optB)} ${pctB}%</span>
-            </div>
-            <div class="market-meta">
-              <span>Ends: ${m.ends}</span>
-              <span class="vol">${m.tokens.toLocaleString()} tokens pooled</span>
-            </div>
-          </div>`;
-        }).join('')}
+      <div class="market-cards" id="community-markets-list">
+        <div style="text-align:center;padding:3rem 2rem;color:var(--white3);font-family:var(--font-mono);font-size:0.85rem;grid-column:1/-1;">
+          Loading community polls...
+        </div>
       </div>
     </div>
 
@@ -615,13 +561,9 @@ function buildProfilePage() {
           <div class="stat-box">
             <h3><span class="icon">🏆</span> Leaderboard</h3>
             <div id="leaderboard-list">
-              ${LEADERBOARD_SEED.map(lb => `
-                <div class="leaderboard-item">
-                  <span class="lb-rank ${lb.rankClass}">${lb.rank}</span>
-                  <span class="lb-name">${lb.name}</span>
-                  <span class="lb-score">${lb.score.toLocaleString()} tkn</span>
-                </div>
-              `).join('')}
+              <div style="text-align:center;padding:2rem;color:var(--white3);font-family:var(--font-mono);font-size:0.8rem;">
+                Leaderboard coming soon...
+              </div>
               <div class="leaderboard-item" id="your-lb-row" style="display:none">
                 <span class="lb-rank" id="your-lb-rank">—</span>
                 <span class="lb-name you" id="your-lb-name">You</span>
@@ -753,6 +695,116 @@ function renderProfile() {
       myMarketsBox.style.display = 'none';
     }
   }
+}
+
+// ── Update home page markets preview ──────────────────────────────────
+function updateHomeMarketsPreview() {
+  const container = document.getElementById('home-markets-preview');
+  if (!container) return;
+
+  const markets = State.firestoreMarkets.slice(0, 3);
+  
+  if (markets.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:3rem 2rem;color:var(--white3);font-family:var(--font-mono);font-size:0.85rem;grid-column:1/-1;">
+        ${demoMode ? 'Demo mode: Markets will appear here when created' : 'No active markets yet. Check back soon!'}
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = markets.map(m => {
+    const pctA = m.pctA || 50;
+    const pctB = 100 - pctA;
+    const totalTokens = m.totalTokens || m.tokens || 0;
+    const marketId = String(m.firestoreId || m.id);
+    return `
+      <div class="market-card" data-market-id="${marketId}"
+           onclick="if(event.target.closest('.share-btn')) return; if(State.currentUser){openVote('${marketId}',null,event)}else{openAuth()}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
+          <div class="market-cat">${escHtml(m.cat)}</div>
+          <button class="share-btn"
+                  onclick="event.stopPropagation();shareMarket('${marketId}','${escHtml(m.question).replace(/'/g,"\\'")}','markets')"
+                  style="background:var(--white1);border:none;border-radius:50%;width:32px;height:32px;
+                         cursor:pointer;display:flex;align-items:center;justify-content:center;
+                         transition:all 0.2s;font-size:0.9rem;"
+                  title="Share this prediction"
+                  onmouseover="this.style.background='var(--green)'"
+                  onmouseout="this.style.background='var(--white1)'">🔗</button>
+        </div>
+        <h3>${escHtml(m.question)}</h3>
+        <div class="odds-bar"><div class="odds-fill" style="width:${pctA}%"></div></div>
+        <div class="odds-labels">
+          <span>${escHtml(m.optA)} ${pctA}%</span>
+          <span>${escHtml(m.optB)} ${pctB}%</span>
+        </div>
+        <div class="market-meta">
+          <span>Ends: ${m.ends}</span>
+          <span class="vol">${totalTokens.toLocaleString()} tokens pooled</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Update community page markets and stats ───────────────────────────
+function updateCommunityPage() {
+  // Update stats
+  const activePollsEl = document.getElementById('community-active-polls');
+  const totalVolumeEl = document.getElementById('community-total-volume');
+  const participantsEl = document.getElementById('community-participants');
+  const tokenCountEl = document.getElementById('community-token-count');
+  
+  const markets = State.firestoreMarkets;
+  const totalVolume = markets.reduce((acc, m) => acc + (m.totalTokens || m.tokens || 0), 0);
+  const totalVotes = markets.reduce((acc, m) => acc + (m.voteCount || 0), 0);
+  
+  if (activePollsEl) activePollsEl.textContent = markets.length;
+  if (totalVolumeEl) totalVolumeEl.textContent = totalVolume.toLocaleString();
+  if (participantsEl) participantsEl.textContent = totalVotes.toLocaleString();
+  if (tokenCountEl) tokenCountEl.textContent = State.userTokens.toLocaleString();
+  
+  // Update markets list
+  const container = document.getElementById('community-markets-list');
+  if (!container) return;
+
+  if (markets.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:3rem 2rem;color:var(--white3);font-family:var(--font-mono);font-size:0.85rem;grid-column:1/-1;">
+        ${demoMode ? 'Demo mode: Community polls will appear here when created' : 'No active polls yet. Be the first to create one!'}
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = markets.map(m => {
+    const pctA = m.pctA || 50;
+    const pctB = 100 - pctA;
+    const totalTokens = m.totalTokens || m.tokens || 0;
+    const marketId = String(m.firestoreId || m.id);
+    return `
+      <div class="market-card" data-market-id="${marketId}"
+           onclick="if(event.target.closest('.share-btn')) return; if(State.currentUser){openVote('${marketId}',null,event)}else{openAuth()}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
+          <div class="market-cat">${escHtml(m.cat)}</div>
+          <button class="share-btn"
+                  onclick="event.stopPropagation();shareMarket('${marketId}','${escHtml(m.question).replace(/'/g,"\\'")}','community')"
+                  style="background:var(--white1);border:none;border-radius:50%;width:32px;height:32px;
+                         cursor:pointer;display:flex;align-items:center;justify-content:center;
+                         transition:all 0.2s;font-size:0.9rem;"
+                  title="Share"
+                  onmouseover="this.style.background='var(--green)'"
+                  onmouseout="this.style.background='var(--white1)'">🔗</button>
+        </div>
+        <h3>${escHtml(m.question)}</h3>
+        <div class="odds-bar"><div class="odds-fill" style="width:${pctA}%"></div></div>
+        <div class="odds-labels">
+          <span>${escHtml(m.optA)} ${pctA}%</span>
+          <span>${escHtml(m.optB)} ${pctB}%</span>
+        </div>
+        <div class="market-meta">
+          <span>Ends: ${m.ends}</span>
+          <span class="vol">${totalTokens.toLocaleString()} tokens pooled</span>
+        </div>
+      </div>`;
+  }).join('');
 }
 
 // ── ADMIN PAGE ────────────────────────────────────────────────────────

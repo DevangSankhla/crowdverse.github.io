@@ -28,15 +28,11 @@ function showPage(id) {
 
   window.scrollTo({ top: 0, behavior: 'instant' });
 
-  if (id === 'home')      updateHeroCta();
+  if (id === 'home')      { updateHeroCta(); updateHomeMarketsPreview(); }
   if (id === 'markets')   loadAndRenderMarkets();
   if (id === 'profile')   renderProfile();
   if (id === 'admin')     renderAdminPage();
-  if (id === 'community') {
-    // Update community token count
-    const el = document.getElementById('community-token-count');
-    if (el) el.textContent = State.userTokens.toLocaleString() || '—';
-  }
+  if (id === 'community') { updateCommunityPage(); }
 }
 
 // ── Handle URL deep links ─────────────────────────────────────────────
