@@ -375,6 +375,9 @@ function openVote(marketId, preselectedOpt, e) {
         </div>
       </div>
 
+      <!-- AI Market Context Panel (populated async by groq.js) -->
+      <div id="groq-context-panel" style="display:none;"></div>
+
       <!-- Outcome + Amount -->
       <div style="padding:1.25rem 1.5rem;">
         <div style="font-size:0.68rem;color:var(--white3);text-transform:uppercase;
@@ -500,6 +503,11 @@ function openVote(marketId, preselectedOpt, e) {
   void modal.offsetWidth;
   modal.classList.add('active');
 
+  // Load AI context async — non-blocking
+  if (typeof loadAndInjectContext === 'function') {
+    loadAndInjectContext(id, m.question, m.cat || '');
+  }
+
   if (preselectedOpt && window.innerWidth <= 640) {
     setTimeout(() => {
       const btn = document.getElementById('confirm-vote-btn');
@@ -621,6 +629,23 @@ let _isSubmittingPrediction = false;
 async function confirmPolymarketVote() {
   if (_isSubmittingPrediction) { return; } // Prevent double-click
   if (!State.selectedVoteOption) { showToast('Select an outcome first', 'yellow'); return; }
+
+  // ── Attention gate: user must confirm they've read the context ──────
+  const slider  = document.getElementById('vote-amount-slider');
+  const amount  = parseInt(slider?.value, 10) || 50;
+  const m       = findMarketById(String(State.activeMarketId));
+  if (!m) { showToast('Market not found', 'red'); return; }
+  const optLabel = State.selectedVoteOption === 'a' ? (m.optA || 'Yes') : (m.optB || 'No');
+  const pctA     = m.pctA || 50;
+  const pctB     = 100 - pctA;
+  const liveOdds = State.selectedVoteOption === 'a'
+    ? (pctA > 0 ? 100 / pctA : 2)
+    : (pctB > 0 ? 100 / pctB : 2);
+  const potentialWin = Math.floor(amount * liveOdds);
+
+  const confirmed = await showAttentionOverlay(optLabel, amount, potentialWin);
+  if (!confirmed) return; // User bailed
+  // ── End attention gate ─────────────────────────────────────────────
   
   _isSubmittingPrediction = true;
 
