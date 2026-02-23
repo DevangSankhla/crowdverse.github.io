@@ -5,10 +5,14 @@
 // Frontend calls /groqContext → this function calls Groq → returns text.
 // ─────────────────────────────────────────────────────────────────────
 
-const functions = require('firebase-functions');
-const admin     = require('firebase-admin');
+const { onRequest } = require('firebase-functions/v2/https');
+const { defineSecret } = require('firebase-functions/params');
+const admin = require('firebase-admin');
 
 admin.initializeApp();
+
+// Secret Manager — key is stored encrypted, never in code or config
+const GROQ_KEY = defineSecret('GROQ_KEY');
 
 // ── Allowed origins (add your prod domain here) ───────────────────────
 const ALLOWED_ORIGINS = [
@@ -46,9 +50,13 @@ function isAllowedOrigin(origin) {
 }
 
 // ── Cloud Function: groqContext ───────────────────────────────────────
-exports.groqContext = functions
-  .region('asia-south1')   // Mumbai — closest to Indian users
-  .https.onRequest(async (req, res) => {
+exports.groqContext = onRequest(
+  {
+    region: 'asia-south1',
+    secrets: [GROQ_KEY],        // grants this function access to the secret
+    cors: false,                 // we handle CORS manually below
+  },
+  async (req, res) => {
 
     // ── CORS ────────────────────────────────────────────────────────
     const origin = req.headers.origin;
@@ -94,11 +102,10 @@ exports.groqContext = functions
       return;
     }
 
-    // ── Groq API key from Firebase environment config ─────────────────
-    // Set with: firebase functions:config:set groq.key="gsk_..."
-    const groqKey = functions.config().groq?.key;
+    // ── Groq API key from Secret Manager ─────────────────────────────
+    const groqKey = GROQ_KEY.value();
     if (!groqKey) {
-      console.error('Groq API key not configured. Run: firebase functions:config:set groq.key="gsk_..."');
+      console.error('GROQ_KEY secret not found. Run: firebase functions:secrets:set GROQ_KEY');
       res.status(500).json({ error: 'AI service not configured' });
       return;
     }
