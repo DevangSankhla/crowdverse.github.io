@@ -384,6 +384,14 @@ function openVote(marketId, preselectedOpt, e) {
   modal.style.display = 'flex';
   void modal.offsetWidth;
   modal.classList.add('active');
+  
+  // On mobile, ensure the confirm button is visible after modal opens
+  if (preselectedOpt && window.innerWidth <= 640) {
+    setTimeout(() => {
+      const btn = document.getElementById('confirm-vote-btn');
+      if (btn) btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 300);
+  }
 }
 
 // ── Close vote modal ──────────────────────────────────────────────────
@@ -435,6 +443,9 @@ function selectOutcome(opt, prob, odds) {
     btn.style.pointerEvents = 'auto';
     btn.textContent = 'Place Prediction';
   }
+  
+  // Scroll to confirm button after selecting outcome
+  scrollToConfirmButton();
 }
 
 function setAmount(amount) {
@@ -445,6 +456,8 @@ function setAmount(amount) {
   slider.value = valid;
   input.value = valid;
   updatePotentialWinnings();
+  // Scroll to confirm button after setting amount
+  scrollToConfirmButton();
 }
 
 function syncSliderWithInput() {
@@ -456,6 +469,20 @@ function syncSliderWithInput() {
   slider.value = val;
   input.value = val;
   updatePotentialWinnings();
+  // Scroll to confirm button after input change
+  scrollToConfirmButton();
+}
+
+function scrollToConfirmButton() {
+  // On mobile, scroll the button into view after a short delay
+  if (window.innerWidth <= 640) {
+    setTimeout(() => {
+      const btn = document.getElementById('confirm-vote-btn');
+      if (btn) {
+        btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 100);
+  }
 }
 
 function updatePotentialWinnings() {
@@ -467,6 +494,9 @@ function updatePotentialWinnings() {
   const potentialReturn = Math.floor(amount * currentOdds);
   const returnEl = document.getElementById('potential-return');
   if (returnEl) returnEl.textContent = State.selectedVoteOption ? '+' + potentialReturn : '—';
+  
+  // Scroll to confirm button so it's visible after adjusting amount
+  scrollToConfirmButton();
 }
 
 function confirmPolymarketVote() {

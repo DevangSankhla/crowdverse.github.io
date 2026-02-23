@@ -93,13 +93,36 @@
     max-width: 100% !important;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important;
     padding: 1.5rem !important;
-    max-height: 92vh;
+    max-height: 85vh;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
-  /* Vote modal: bottom sheet */
+  /* Vote modal: bottom sheet with scrollable content */
   #polymarket-vote-modal .modal {
     border-radius: 16px 16px 0 0 !important;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  
+  #polymarket-vote-modal .modal > div:first-child {
+    flex-shrink: 0;
+  }
+  
+  #polymarket-vote-modal .modal > div:nth-child(2) {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 1rem;
+  }
+  
+  #polymarket-vote-modal .modal > div:last-child {
+    flex-shrink: 0;
+    padding: 1rem 1.5rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
+    background: var(--off-black);
+    border-top: 1px solid var(--border);
   }
 
   /* Profile layout */
@@ -128,8 +151,19 @@
     left: 1rem !important;
     right: 1rem !important;
     width: auto !important;
-    bottom: 80px !important; /* above mobile nav */
+    bottom: 100px !important; /* above mobile nav and safe area */
     transform: translateX(0) translateY(100px) !important;
+  }
+  
+  /* Vote modal button always visible */
+  #confirm-vote-btn {
+    min-height: 52px;
+    font-size: 1.05rem;
+  }
+  
+  /* Smooth scroll for modal content */
+  #polymarket-vote-modal {
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Page content: no top padding overlap */

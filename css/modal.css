@@ -203,6 +203,35 @@
   margin-bottom: 1.5rem;
   line-height: 1.35;
 }
+
+/* Mobile keyboard handling for inputs in modals */
+@media (max-width: 640px) {
+  .modal-overlay {
+    align-items: flex-end !important;
+  }
+  
+  .modal {
+    max-height: 85vh !important;
+  }
+  
+  /* Ensure form inputs don't cause zoom on iOS */
+  .modal input[type="number"],
+  .modal input[type="text"],
+  .modal input[type="email"],
+  .modal input[type="password"] {
+    font-size: 16px !important;
+  }
+  
+  /* Vote modal specific improvements */
+  #vote-amount-slider {
+    min-height: 44px;
+    touch-action: pan-y;
+  }
+  
+  .outcome-btn {
+    min-height: 60px;
+  }
+}
 .vote-options {
   display: grid;
   grid-template-columns: 1fr 1fr;
