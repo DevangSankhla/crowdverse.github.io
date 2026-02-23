@@ -4,25 +4,27 @@
 
 :root {
   /* ── Colours ── */
-  --black:       #000000;
-  --off-black:   #0a0a0a;
-  --dark:        #111111;
-  --dark2:       #1a1a1a;
-  --border:      #222222;
-  --border2:     #2a2a2a;
+  --black:       #0a0a0b;
+  --off-black:   #111113;
+  --dark:        #18181a;
+  --dark2:       #1e1e20;
+  --border:      #2a2a2d;
+  --border2:     #323236;
 
-  --green:       #7fff7f;
-  --green-dim:   #4db84d;
-  --green-glow:  rgba(127, 255, 127, 0.15);
-  --green-glow2: rgba(127, 255, 127, 0.06);
+  /* Subtle muted green - less neon, more sage */
+  --green:       #7dd87d;
+  --green-dim:   #5aa85a;
+  --green-glow:  rgba(125, 216, 125, 0.12);
+  --green-glow2: rgba(125, 216, 125, 0.05);
 
-  --white:       #f0f0f0;
-  --white1:      #333333;
-  --white2:      #aaaaaa;
-  --white3:      #555555;
+  --white:       #e8e8e9;
+  --white1:      #3a3a3d;
+  --white2:      #9a9a9e;
+  --white3:      #6a6a6e;
 
-  --red:         #ff5555;
-  --yellow:      #ffd700;
+  /* Muted red and yellow */
+  --red:         #d67373;
+  --yellow:      #d4b85a;
 
   /* ── Typography ── */
   --font-display: 'Syne', sans-serif;

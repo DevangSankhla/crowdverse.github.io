@@ -156,3 +156,27 @@ _toastStyles.textContent = `
   }
 `;
 document.head.appendChild(_toastStyles);
+
+// ── Keyboard shortcuts ────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  // Escape key closes open modals
+  if (e.key === 'Escape') {
+    const authModal = document.getElementById('auth-modal');
+    if (authModal?.classList.contains('open')) {
+      closeAuth();
+      return;
+    }
+    
+    const pm = document.getElementById('polymarket-vote-modal');
+    if (pm && pm.style.display === 'flex') {
+      closePolymarketVoteModal();
+      return;
+    }
+    
+    const cm = document.getElementById('create-market-modal');
+    if (cm && cm.style.display === 'flex') {
+      closeCreateMarketModal();
+      return;
+    }
+  }
+});

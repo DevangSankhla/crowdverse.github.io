@@ -29,10 +29,10 @@ function showPage(id) {
   window.scrollTo({ top: 0, behavior: 'instant' });
 
   if (id === 'home')      { updateHeroCta(); updateHomeMarketsPreview(); }
-  if (id === 'markets')   loadAndRenderMarkets();
+  if (id === 'markets')   { loadAndRenderMarkets(); updateMarketsPageStats(); }
   if (id === 'profile')   renderProfile();
   if (id === 'admin')     renderAdminPage();
-  if (id === 'community') { updateCommunityPage(); }
+  if (id === 'community') { buildCommunityPage(); }
 }
 
 // ── Handle URL deep links ─────────────────────────────────────────────
@@ -156,13 +156,13 @@ function buildMobileNav() {
       <span class="mobile-nav-icon">🏠</span>
       <span class="mobile-nav-label">Home</span>
     </button>
-    <button class="mobile-nav-btn" data-page="community" onclick="showPage('community')">
-      <span class="mobile-nav-icon">👥</span>
-      <span class="mobile-nav-label">Community</span>
-    </button>
     <button class="mobile-nav-btn" data-page="markets" onclick="showPage('markets')">
       <span class="mobile-nav-icon">📈</span>
       <span class="mobile-nav-label">Markets</span>
+    </button>
+    <button class="mobile-nav-btn" data-page="community" onclick="showPage('community')">
+      <span class="mobile-nav-icon">➕</span>
+      <span class="mobile-nav-label">Submit</span>
     </button>
     <button class="mobile-nav-btn" data-page="rewards" onclick="showPage('rewards')">
       <span class="mobile-nav-icon">🎁</span>

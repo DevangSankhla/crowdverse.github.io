@@ -50,8 +50,9 @@ function startMarketsListener() {
       State.firestoreMarkets = markets;
       renderMarkets(_currentMarketFilter);
       
-      // Update home and community pages
+      // Update home, markets page, and community pages
       if (typeof updateHomeMarketsPreview === 'function') updateHomeMarketsPreview();
+      if (typeof updateMarketsPageStats === 'function') updateMarketsPageStats();
       if (typeof updateCommunityPage === 'function') updateCommunityPage();
       
       // Start listeners for vote counts on each market
@@ -108,8 +109,9 @@ function startMarketVotesListener(marketId) {
         // Re-render if this market is visible
         renderMarkets(_currentMarketFilter);
         
-        // Update home and community pages
+        // Update home, markets page, and community pages
         if (typeof updateHomeMarketsPreview === 'function') updateHomeMarketsPreview();
+        if (typeof updateMarketsPageStats === 'function') updateMarketsPageStats();
         if (typeof updateCommunityPage === 'function') updateCommunityPage();
         
         // Update modal if open for this market
@@ -267,16 +269,6 @@ function renderMarkets(filter = 'all') {
         <span>📅 Ends: ${escHtml(String(m.ends || '—'))}</span>
         <span style="color:var(--green-dim);">🎟️ ${totalTokens.toLocaleString()} pooled</span>
       </div>
-
-      ${creatorName ? `
-        <div style="margin-top:0.5rem;font-family:var(--font-mono);font-size:0.7rem;color:var(--white3);">
-          Created by
-          <button onclick="event.stopPropagation();viewUserProfile('${escHtml(m.createdBy || '')}','${escHtml(creatorName)}')"
-                  style="background:none;border:none;color:var(--green);cursor:pointer;font-family:var(--font-mono);font-size:0.7rem;padding:0;text-decoration:underline;">
-            ${escHtml(creatorName)}
-          </button>
-        </div>
-      ` : ''}
 
       ${isLive
         ? `<div style="display:flex;gap:0.75rem;margin-top:1rem;">
@@ -600,7 +592,9 @@ async function confirmPolymarketVote() {
   if (!State.selectedVoteOption) { showToast('Select an outcome first', 'yellow'); return; }
 
   const slider = document.getElementById('vote-amount-slider');
+  const btn = document.getElementById('confirm-vote-btn');
   if (!slider) return;
+  
   const amount = parseInt(slider.value, 10);
   if (!amount || amount < 10) { showToast('Minimum stake is 10 tokens', 'yellow'); return; }
   if (amount > State.userTokens) { showToast('Not enough tokens!', 'red'); return; }
@@ -611,23 +605,30 @@ async function confirmPolymarketVote() {
   const optLabel = State.selectedVoteOption === 'a' ? m.optA : m.optB;
   const potentialWin = Math.floor(amount * currentOdds);
 
-  // Deduct tokens locally
-  State.userTokens -= amount;
-  
-  // Add to user's predictions
-  State.userPredictions.push({
-    marketId: State.activeMarketId,
-    question: m.question,
-    option: optLabel,
-    amount,
-    potentialWin,
-    odds: currentOdds,
-    status: 'pending'
-  });
+  // Show loading state
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Placing Prediction...';
+  }
 
-  // Save vote to Firestore if not in demo mode
-  if (!demoMode && db && State.currentUser) {
-    try {
+  try {
+    // Deduct tokens locally
+    State.userTokens -= amount;
+    
+    // Add to user's predictions
+    State.userPredictions.push({
+      marketId: State.activeMarketId,
+      question: m.question,
+      option: optLabel,
+      amount,
+      potentialWin,
+      odds: currentOdds,
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    });
+
+    // Save vote to Firestore if not in demo mode
+    if (!demoMode && db && State.currentUser) {
       // Add vote to the market's votes subcollection
       await db.collection('markets').doc(State.activeMarketId).collection('votes').add({
         userId: State.currentUser.uid,
@@ -646,20 +647,28 @@ async function confirmPolymarketVote() {
       await db.collection('markets').doc(State.activeMarketId).update({
         tokens: firebase.firestore.FieldValue.increment(amount)
       });
-    } catch (e) {
-      console.error('Failed to save vote:', e);
-      showToast('Vote recorded locally but sync failed', 'yellow');
     }
-  }
 
-  updateTokenDisplay();
-  closePolymarketVoteModal();
-  showToast(`🎯 ${amount} tokens on "${optLabel}" — potential win: ${potentialWin}!`, 'green');
+    updateTokenDisplay();
+    closePolymarketVoteModal();
+    showToast(`🎯 ${amount} tokens on "${optLabel}" — potential win: ${potentialWin}!`, 'green');
 
-  if (!demoMode && typeof saveUserData === 'function') saveUserData();
-  if (typeof renderProfile === 'function') {
-    const histEl = document.getElementById('prediction-history');
-    if (histEl) renderProfile();
+    if (!demoMode && typeof saveUserData === 'function') saveUserData();
+    if (typeof renderProfile === 'function') {
+      const histEl = document.getElementById('prediction-history');
+      if (histEl) renderProfile();
+    }
+  } catch (e) {
+    console.error('Failed to place prediction:', e);
+    // Refund tokens on error
+    State.userTokens += amount;
+    updateTokenDisplay();
+    showToast('Failed to place prediction. Please try again.', 'red');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = 'Place Prediction';
+    }
   }
 }
 
