@@ -14,10 +14,22 @@ function escHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
+let _toastThrottleTimer = null;
+let _lastToastMessage = '';
+let _lastToastTime = 0;
+
 /**
  * Show a toast notification.
  */
 function showToast(message, color = 'green') {
+  // Prevent duplicate toasts within 2 seconds
+  const now = Date.now();
+  if (message === _lastToastMessage && now - _lastToastTime < 2000) {
+    return;
+  }
+  _lastToastMessage = message;
+  _lastToastTime = now;
+  
   const existing = document.querySelector('.toast-dynamic');
   if (existing) existing.remove();
 
@@ -40,7 +52,7 @@ function showToast(message, color = 'green') {
     font-weight: 600;
     font-family: var(--font-mono);
     font-size: 0.82rem;
-    z-index: 10000;
+    z-index: 10001;
     max-width: 90vw;
     text-align: center;
     box-shadow: 0 4px 20px rgba(0,0,0,0.4);
@@ -176,6 +188,13 @@ document.addEventListener('keydown', e => {
     const cm = document.getElementById('create-market-modal');
     if (cm && cm.style.display === 'flex') {
       closeCreateMarketModal();
+      return;
+    }
+    
+    // Legacy vote modal (from index.html)
+    const vm = document.getElementById('vote-modal');
+    if (vm?.classList.contains('open')) {
+      closeVoteModal();
       return;
     }
   }

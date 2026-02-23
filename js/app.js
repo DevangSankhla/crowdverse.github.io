@@ -41,6 +41,12 @@ function handleDeepLink() {
   const page   = params.get('page');
   const mktId  = params.get('id');
 
+  // Sanitize market ID - only allow alphanumeric, hyphens, and underscores
+  if (mktId && !/^[a-zA-Z0-9_-]+$/.test(mktId)) {
+    console.warn('Invalid market ID in URL');
+    return false;
+  }
+
   if (page === 'markets' && mktId) {
     showPage('markets');
     setTimeout(() => _tryOpenMarket(mktId), 800);
@@ -115,6 +121,15 @@ function highlightAndScrollToMarket(marketId) {
   _tryOpenMarket(marketId);
 }
 
+// ── Update markets page stats ──────────────────────────────────────────
+function updateMarketsPageStats() {
+  const totalMarkets = State.firestoreMarkets?.length || 0;
+  const totalVolume = State.firestoreMarkets?.reduce((sum, m) => sum + (m.totalTokens || m.tokens || 0), 0) || 0;
+  
+  // These could be displayed on the markets page if needed
+  console.log(`Markets: ${totalMarkets}, Volume: ${totalVolume}`);
+}
+
 // ── Share market ──────────────────────────────────────────────────────
 async function shareMarket(marketId, question, pageType = 'markets') {
   const shareUrl  = `${window.location.origin}${window.location.pathname}?page=${pageType}&id=${marketId}`;
@@ -124,7 +139,12 @@ async function shareMarket(marketId, question, pageType = 'markets') {
     try {
       await navigator.share({ title: 'CrowdVerse Prediction', text: shareText, url: shareUrl });
       return;
-    } catch (_) {}
+    } catch (err) {
+      // User cancelled or share failed - fall through to clipboard
+      if (err.name !== 'AbortError') {
+        console.warn('Share failed:', err);
+      }
+    }
   }
   _copyToClipboard(shareUrl);
 }

@@ -104,6 +104,15 @@ function onAuthSuccess(isNew) {
   document.getElementById('auth-form-wrap').classList.add('hidden');
   if (isNew) {
     document.getElementById('auth-success').classList.remove('hidden');
+    // Auto-close after 3 seconds
+    setTimeout(() => {
+      closeAuth();
+      // Reset form for next time
+      setTimeout(() => {
+        document.getElementById('auth-success').classList.add('hidden');
+        document.getElementById('auth-form-wrap').classList.remove('hidden');
+      }, 300);
+    }, 3000);
   } else {
     closeAuth();
     showToast('Welcome back! 👋', 'green');
@@ -119,10 +128,24 @@ async function handleLogout() {
   if (!demoMode && auth) {
     try { await auth.signOut(); } catch (_) {}
   }
+  
+  // Clean up Firestore listeners
+  if (typeof _marketsUnsubscribe === 'function') {
+    _marketsUnsubscribe();
+    _marketsUnsubscribe = null;
+  }
+  if (typeof _marketVotesUnsubscribe === 'object') {
+    Object.values(_marketVotesUnsubscribe).forEach(unsub => {
+      if (typeof unsub === 'function') unsub();
+    });
+    _marketVotesUnsubscribe = {};
+  }
+  
   State.currentUser     = null;
   State.userTokens      = 0;
   State.userPredictions = [];
   State.userCreatedMarkets = [];
+  State.firestoreMarkets = [];
   updateNavForAuth();
   updateHeroCta(); // ← Restore "Get 1000 tokens" CTA
   showToast('Logged out. See you soon!', 'green');
@@ -163,6 +186,38 @@ function showAuthError(msg) {
   el.style.display = '';
 }
 
+// ── Weekly bonus check ────────────────────────────────────────────────
+async function checkWeeklyBonus() {
+  if (!State.currentUser || demoMode || !db) return;
+  
+  try {
+    const userRef = db.collection('users').doc(State.currentUser.uid);
+    const snap = await userRef.get();
+    if (!snap.exists) return;
+    
+    const data = snap.data();
+    const lastBonus = data.lastWeeklyBonus?.toDate?.() || new Date(0);
+    const now = new Date();
+    
+    // Check if it's been at least 7 days
+    const daysSinceBonus = (now - lastBonus) / (1000 * 60 * 60 * 24);
+    
+    if (daysSinceBonus >= 7) {
+      // Award 200 tokens
+      await userRef.update({
+        tokens: firebase.firestore.FieldValue.increment(200),
+        lastWeeklyBonus: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      
+      State.userTokens += 200;
+      updateTokenDisplay();
+      showToast('🎁 Weekly bonus: +200 tokens!', 'green');
+    }
+  } catch (e) {
+    console.warn('Weekly bonus check failed:', e);
+  }
+}
+
 // ── Restore session on page load ──────────────────────────────────────
 if (!demoMode && typeof auth !== 'undefined') {
   auth.onAuthStateChanged(async user => {
@@ -173,6 +228,7 @@ if (!demoMode && typeof auth !== 'undefined') {
       updateTokenDisplay();
       updateHeroCta(); // ← Update CTA after session restore
       if (typeof checkUserNotifications === 'function') checkUserNotifications();
+      if (typeof checkWeeklyBonus === 'function') checkWeeklyBonus();
     }
   });
 }

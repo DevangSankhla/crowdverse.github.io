@@ -5,7 +5,12 @@
 const ADMIN_EMAIL = 'founder@crowdverse.in';
 
 function isAdmin() {
-  return !!(State.currentUser && State.currentUser.email === ADMIN_EMAIL);
+  // Client-side check only - actual security is enforced by Firestore rules
+  const email = State.currentUser?.email;
+  if (!email) return false;
+  // Prevent trivial console manipulation by checking email format
+  if (typeof email !== 'string' || !email.includes('@')) return false;
+  return email === ADMIN_EMAIL;
 }
 
 let _adminMarketsCache = {};

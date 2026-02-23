@@ -62,7 +62,18 @@ function startMarketsListener() {
       if (typeof updateCommunityPage     === 'function') updateCommunityPage();
 
       markets.forEach(m => startMarketVotesListener(m.firestoreId));
-    }, err => console.warn('Markets listener error:', err));
+    }, err => {
+      console.warn('Markets listener error:', err);
+      const list = document.getElementById('markets-list');
+      if (list) {
+        list.innerHTML = `
+          <div style="text-align:center;padding:4rem 2rem;color:var(--red);
+                      font-family:var(--font-mono);font-size:0.85rem;">
+            ⚠️ Failed to load markets. Please check your connection and refresh.
+          </div>`;
+      }
+      showToast('Failed to load markets — please refresh', 'red');
+    });
 }
 
 // ── Real-time votes listener for a single market ──────────────────────
@@ -315,6 +326,10 @@ function openVote(marketId, preselectedOpt, e) {
 
   if (m.status === 'rejected') { showToast('This market has been removed.', 'red'); return; }
   if (m.status !== 'live')     { showToast('This market is still under review.', 'yellow'); return; }
+  
+  // Check if market has ended
+  const daysLeft = getDaysRemaining(m.ends);
+  if (daysLeft === 'Ended') { showToast('This market has already ended.', 'red'); return; }
 
   State.activeMarketId      = id;
   State.selectedVoteOption  = preselectedOpt || null;
@@ -409,10 +424,11 @@ function openVote(marketId, preselectedOpt, e) {
           </div>
 
           <input type="range" id="vote-amount-slider"
-                 min="10" max="${Math.max(10, Math.min(State.userTokens, 5000))}" value="50"
+                 min="10" max="${Math.max(10, Math.min(Math.max(State.userTokens, 10), 5000))}" value="${Math.min(50, Math.max(State.userTokens, 10))}"
                  oninput="updatePotentialWinnings()"
+                 ${State.userTokens < 10 ? 'disabled' : ''}
                  style="width:100%;height:5px;-webkit-appearance:none;appearance:none;
-                        background:var(--white1);border-radius:3px;outline:none;cursor:pointer;margin-bottom:0.75rem;">
+                        background:var(--white1);border-radius:3px;outline:none;cursor:${State.userTokens < 10 ? 'not-allowed' : 'pointer'};margin-bottom:0.75rem;opacity:${State.userTokens < 10 ? '0.5' : '1'};">
 
           <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
             <input type="number" id="vote-amount-input" value="50" min="10" max="${State.userTokens}"
@@ -517,7 +533,16 @@ function scrollToConfirmButton() {
 
 function selectOutcome(opt, prob, odds) {
   State.selectedVoteOption = opt;
-  currentOdds = parseFloat(odds);
+  currentOdds = parseFloat(odds) || 2;
+  
+  // Also update the market's stored odds to ensure consistency
+  const m = findMarketById(String(State.activeMarketId));
+  if (m) {
+    const pctA = m.pctA || 50;
+    const pctB = 100 - pctA;
+    if (opt === 'a' && pctA > 0) currentOdds = 100 / pctA;
+    if (opt === 'b' && pctB > 0) currentOdds = 100 / pctB;
+  }
 
   document.querySelectorAll('.outcome-btn').forEach(btn => {
     btn.classList.remove('selected');
@@ -603,14 +628,21 @@ async function confirmPolymarketVote() {
   if (!m) { showToast('Market not found', 'red'); return; }
 
   const optLabel    = State.selectedVoteOption === 'a' ? m.optA : m.optB;
-  const potentialWin = Math.floor(amount * currentOdds);
+  
+  // Recalculate odds to ensure we have the correct value
+  const pctA   = m.pctA || 50;
+  const pctB   = 100 - pctA;
+  const oddsA  = pctA > 0 ? (100 / pctA) : 2;
+  const oddsB  = pctB > 0 ? (100 / pctB) : 2;
+  const liveOdds = State.selectedVoteOption === 'a' ? oddsA : oddsB;
+  const potentialWin = Math.floor(amount * liveOdds);
   const predictionEntry = {
     marketId:    String(State.activeMarketId),
     question:    m.question,
     option:      optLabel,
     amount,
     potentialWin,
-    odds:        currentOdds,
+    odds:        liveOdds,
     status:      'pending',
     createdAt:   new Date().toISOString()
   };
@@ -619,45 +651,61 @@ async function confirmPolymarketVote() {
   State.userTokens -= amount;
   State.userPredictions.push(predictionEntry);
 
-  // Disable confirm button to prevent double-submit
+  // Disable confirm button immediately to prevent double-submit
   const btn = document.getElementById('confirm-vote-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Confirming…'; }
+  if (btn) { 
+    btn.disabled = true; 
+    btn.textContent = 'Confirming…';
+    btn.style.opacity = '0.7';
+    btn.style.cursor = 'not-allowed';
+  }
 
   if (!demoMode && db && State.currentUser) {
     try {
-      const batch = db.batch();
+      // Use a transaction to ensure atomic validation
+      await db.runTransaction(async (transaction) => {
+        const userRef = db.collection('users').doc(State.currentUser.uid);
+        const userDoc = await transaction.get(userRef);
+        
+        if (!userDoc.exists) {
+          throw new Error('User not found');
+        }
+        
+        const currentTokens = userDoc.data().tokens || 0;
+        if (currentTokens < amount) {
+          throw new Error('Insufficient tokens');
+        }
+        
+        // 1. Add vote to market's votes subcollection
+        const voteRef = db.collection('markets').doc(State.activeMarketId).collection('votes').doc();
+        transaction.set(voteRef, {
+          userId:    State.currentUser.uid,
+          userName:  State.currentUser.displayName || State.currentUser.email?.split('@')[0] || 'User',
+          option:    State.selectedVoteOption,
+          amount,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
 
-      // 1. Add vote to market's votes subcollection
-      const voteRef = db.collection('markets').doc(State.activeMarketId).collection('votes').doc();
-      batch.set(voteRef, {
-        userId:    State.currentUser.uid,
-        userName:  State.currentUser.displayName || State.currentUser.email?.split('@')[0] || 'User',
-        option:    State.selectedVoteOption,
-        amount,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        // 2. Atomically deduct tokens & persist prediction in user doc
+        transaction.update(userRef, {
+          tokens:      firebase.firestore.FieldValue.increment(-amount),
+          predictions: firebase.firestore.FieldValue.arrayUnion(predictionEntry)
+        });
+
+        // 3. Increment market's denormalised token total
+        const mktRef = db.collection('markets').doc(State.activeMarketId);
+        transaction.update(mktRef, {
+          tokens: firebase.firestore.FieldValue.increment(amount)
+        });
       });
-
-      // 2. Atomically deduct tokens & persist prediction in user doc
-      const userRef = db.collection('users').doc(State.currentUser.uid);
-      batch.update(userRef, {
-        tokens:      firebase.firestore.FieldValue.increment(-amount),
-        predictions: firebase.firestore.FieldValue.arrayUnion(predictionEntry)
-      });
-
-      // 3. Increment market's denormalised token total
-      const mktRef = db.collection('markets').doc(State.activeMarketId);
-      batch.update(mktRef, {
-        tokens: firebase.firestore.FieldValue.increment(amount)
-      });
-
-      await batch.commit();
     } catch (e) {
       // Rollback local state on failure
       State.userTokens += amount;
       State.userPredictions.pop();
       console.error('Vote commit failed:', e);
       if (btn) { btn.disabled = false; btn.textContent = 'Place Prediction'; }
-      showToast('Failed to record prediction — please try again.', 'red');
+      const msg = e.message === 'Insufficient tokens' ? 'Not enough tokens!' : 'Failed to record prediction — please try again.';
+      showToast(msg, 'red');
       return;
     }
   }
@@ -665,6 +713,11 @@ async function confirmPolymarketVote() {
   updateTokenDisplay();
   closePolymarketVoteModal();
   showToast(`🎯 ${amount} tokens on "${optLabel}" — potential +${potentialWin} if correct!`, 'green');
+
+  // Refresh markets to show "Predicted" badge
+  renderMarkets(_currentMarketFilter);
+  if (typeof updateHomeMarketsPreview === 'function') updateHomeMarketsPreview();
+  if (typeof updateCommunityPage === 'function') updateCommunityPage();
 
   if (typeof renderProfile === 'function') {
     const histEl = document.getElementById('prediction-history');

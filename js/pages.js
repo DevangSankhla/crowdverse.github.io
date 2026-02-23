@@ -183,9 +183,10 @@ function buildCommunityPage() {
             Note: polls that don't align with our guidelines won't be approved and no tokens are refunded — so keep it relevant!
           </p>
         </div>
-        <button class="btn btn-primary" onclick="openCreateMarketModal()" style="white-space:nowrap;flex-shrink:0;">
-          Submit a Poll →
-        </button>
+        ${State.currentUser 
+          ? `<button class="btn btn-primary" onclick="openCreateMarketModal()" style="white-space:nowrap;flex-shrink:0;">Submit a Poll →</button>`
+          : `<button class="btn btn-primary" onclick="openAuth()" style="white-space:nowrap;flex-shrink:0;">Log In to Submit</button>`
+        }
       </div>
     </div>
 
@@ -305,11 +306,17 @@ function applyMarketFilter(filter) {
   if (typeof renderMarkets === 'function') renderMarkets(filter);
 }
 
+let _searchDebounceTimer = null;
+
 function filterMarketsSearch() {
-  if (typeof _marketSearchQuery !== 'undefined') {
-    _marketSearchQuery = document.getElementById('markets-search')?.value.trim().toLowerCase() || '';
-  }
-  if (typeof renderMarkets === 'function') renderMarkets(_currentMarketFilter);
+  if (_searchDebounceTimer) clearTimeout(_searchDebounceTimer);
+  
+  _searchDebounceTimer = setTimeout(() => {
+    if (typeof _marketSearchQuery !== 'undefined') {
+      _marketSearchQuery = document.getElementById('markets-search')?.value.trim().toLowerCase() || '';
+    }
+    if (typeof renderMarkets === 'function') renderMarkets(_currentMarketFilter);
+  }, 150); // 150ms debounce
 }
 
 function applyMarketSort() {
@@ -420,6 +427,13 @@ async function submitCreateMarket() {
 
   if (!question || question.length < 10) { showToast('Question too short — be more descriptive', 'yellow'); return; }
   if (!endDate)                           { showToast('Please select an end date', 'yellow'); return; }
+  
+  // Validate end date is in the future
+  const selectedDate = new Date(endDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (selectedDate < today) { showToast('End date must be in the future', 'yellow'); return; }
+  
   if (State.userTokens < 10)             { showToast('You need at least 10 tokens to submit', 'red'); return; }
 
   const catEmojis = {
@@ -448,33 +462,41 @@ async function submitCreateMarket() {
     createdAt:      new Date().toISOString()
   };
 
-  // Optimistic deduction
-  State.userTokens -= 10;
-  updateTokenDisplay();
-
   if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<span class="spinner"></span> Submitting…'; }
 
   if (!demoMode && db) {
     try {
-      const docRef = await db.collection('markets').add({
+      // Use a batch to atomically create market AND deduct tokens
+      const batch = db.batch();
+      
+      const marketRef = db.collection('markets').doc();
+      batch.set(marketRef, {
         ...newMarket,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      newMarket.firestoreId = docRef.id;
-      newMarket.id          = docRef.id;
+      newMarket.firestoreId = marketRef.id;
+      newMarket.id          = marketRef.id;
 
       // Atomically deduct tokens from user
-      await db.collection('users').doc(State.currentUser.uid).update({
+      const userRef = db.collection('users').doc(State.currentUser.uid);
+      batch.update(userRef, {
         tokens: firebase.firestore.FieldValue.increment(-10)
       });
-    } catch (e) {
-      // Rollback
-      State.userTokens += 10;
+      
+      await batch.commit();
+      
+      // Only deduct locally after successful commit
+      State.userTokens -= 10;
       updateTokenDisplay();
+    } catch (e) {
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit Poll (10 tokens)'; }
       showToast('Failed to submit: ' + e.message, 'red');
       return;
     }
+  } else {
+    // Demo mode - just deduct locally
+    State.userTokens -= 10;
+    updateTokenDisplay();
   }
 
   State.userCreatedMarkets.push(newMarket);
@@ -556,7 +578,7 @@ function buildProfilePage() {
                      placeholder="New username" maxlength="30"
                      style="margin-bottom:0.5rem;text-align:center;">
               <div style="display:flex;gap:0.5rem;">
-                <button onclick="saveUsername()" class="btn btn-primary" style="flex:1;padding:0.5rem;">Save (50 tkn)</button>
+                <button onclick="if(confirm('Are you sure? This will deduct 50 tokens.')) saveUsername();" class="btn btn-primary" style="flex:1;padding:0.5rem;">Save (50 tkn)</button>
                 <button onclick="toggleUsernameEdit(false)" class="btn btn-ghost" style="flex:1;padding:0.5rem;">Cancel</button>
               </div>
             </div>
@@ -598,14 +620,41 @@ function buildProfilePage() {
           <div class="stat-box">
             <h3><span class="icon">🏆</span> Leaderboard</h3>
             <div id="leaderboard-list">
-              <div style="text-align:center;padding:2rem;color:var(--white3);font-family:var(--font-mono);font-size:0.8rem;">
-                Leaderboard coming soon...
-              </div>
-              <div class="leaderboard-item" id="your-lb-row" style="display:none">
-                <span class="lb-rank" id="your-lb-rank">—</span>
-                <span class="lb-name you" id="your-lb-name">You</span>
-                <span class="lb-score" id="your-lb-score">—</span>
-              </div>
+              ${(function() {
+                // Get all users from admin cache or create simple leaderboard
+                let users = [];
+                if (typeof _adminUsersCache !== 'undefined' && _adminUsersCache.length > 0) {
+                  users = _adminUsersCache.filter(u => u.email !== 'founder@crowdverse.in');
+                }
+                
+                // If we have no users yet, show placeholder
+                if (users.length === 0) {
+                  return `<div style="text-align:center;padding:2rem;color:var(--white3);font-family:var(--font-mono);font-size:0.8rem;">
+                    Leaderboard will appear as more users join...
+                  </div>`;
+                }
+                
+                // Sort by tokens
+                users.sort((a, b) => (b.tokens || 0) - (a.tokens || 0));
+                
+                // Show top 5
+                return users.slice(0, 5).map((u, i) => {
+                  const isYou = u.uid === State.currentUser?.uid;
+                  return `
+                    <div class="leaderboard-item" style="${isYou ? 'background:rgba(127,255,127,0.05);' : ''}">
+                      <span class="lb-rank">#${i + 1}</span>
+                      <span class="lb-name ${isYou ? 'you' : ''}">${escHtml(u.displayName || u.email?.split('@')[0] || 'User')}${isYou ? ' (You)' : ''}</span>
+                      <span class="lb-score">${(u.tokens || 0).toLocaleString()}</span>
+                    </div>
+                  `;
+                }).join('') + `
+                  <div class="leaderboard-item" id="your-lb-row" style="display:none;margin-top:0.5rem;border-top:1px solid var(--border);padding-top:0.5rem;">
+                    <span class="lb-rank" id="your-lb-rank">—</span>
+                    <span class="lb-name you" id="your-lb-name">You</span>
+                    <span class="lb-score" id="your-lb-score">—</span>
+                  </div>
+                `;
+              })()}
             </div>
           </div>
 
@@ -643,10 +692,22 @@ function toggleUsernameEdit(show) {
 
 // ── Save new username — costs 50 tokens ──────────────────────────────
 async function saveUsername() {
-  const newName = document.getElementById('username-edit-input')?.value.trim();
+  let newName = document.getElementById('username-edit-input')?.value.trim();
+  
+  // Validation
   if (!newName || newName.length < 2) { showToast('Username must be at least 2 characters', 'yellow'); return; }
   if (newName.length > 30)            { showToast('Username too long (max 30 characters)', 'yellow'); return; }
   if (State.userTokens < 50)          { showToast('You need 50 tokens to change your username', 'red'); return; }
+  
+  // Sanitize - remove HTML tags and special characters
+  newName = newName
+    .replace(/[<>"']/g, '') // Remove < > " '
+    .replace(/&/g, 'and')   // Replace & with 'and'
+    .replace(/\s+/g, ' ')   // Collapse multiple spaces
+    .trim();
+  
+  // Check for empty after sanitization
+  if (!newName || newName.length < 2) { showToast('Username contains invalid characters', 'yellow'); return; }
 
   // Optimistic deduction
   State.userTokens -= 50;
@@ -678,7 +739,7 @@ async function saveUsername() {
 }
 
 // ── Render profile data ───────────────────────────────────────────────
-function renderProfile() {
+async function renderProfile() {
   if (!State.currentUser) {
     document.getElementById('profile-logged-out').style.display = '';
     document.getElementById('profile-logged-in').style.display  = 'none';
@@ -686,6 +747,21 @@ function renderProfile() {
   }
   document.getElementById('profile-logged-out').style.display = 'none';
   document.getElementById('profile-logged-in').style.display  = '';
+  
+  // Refresh user data from Firestore to ensure we're showing latest tokens
+  if (!demoMode && db) {
+    try {
+      const snap = await db.collection('users').doc(State.currentUser.uid).get();
+      if (snap.exists) {
+        const data = snap.data();
+        State.userTokens = data.tokens || State.userTokens;
+        State.userPredictions = data.predictions || State.userPredictions;
+        updateTokenDisplay();
+      }
+    } catch (e) {
+      console.warn('Failed to refresh profile data:', e);
+    }
+  }
 
   const name = State.currentUser.displayName
     || State.currentUser.email?.split('@')[0]
@@ -768,7 +844,7 @@ function updateHomeMarketsPreview() {
     const daysLeft    = getDaysRemaining(m.ends);
     return `
       <div class="market-card" data-market-id="${marketId}"
-           onclick="if(event.target.closest('.share-btn')) return; if(State.currentUser){openVote('${marketId}',null,event)}else{openAuth()}">
+           onclick="if(event.target.closest('.share-btn')) return; if(!State.currentUser){openAuth();return;} if('${daysLeft}'==='Ended'){showToast('This market has ended','red');return;} openVote('${marketId}',null,event)">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
           <div class="market-cat">${escHtml(m.cat)}</div>
           <button class="share-btn"
@@ -855,7 +931,7 @@ function updateCommunityPage() {
     const hasVoted    = State.userPredictions.some(p => String(p.marketId) === marketId);
     return `
       <div class="market-card" data-market-id="${marketId}"
-           onclick="if(event.target.closest('.share-btn')) return; if(State.currentUser){openVote('${marketId}',null,event)}else{openAuth()}">
+           onclick="if(event.target.closest('.share-btn')) return; if(!State.currentUser){openAuth();return;} if('${daysLeft}'==='Ended'){showToast('This market has ended','red');return;} openVote('${marketId}',null,event)">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
           <div style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap;">
             <div class="market-cat">${escHtml(m.cat)}</div>
