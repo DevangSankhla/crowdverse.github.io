@@ -12,8 +12,8 @@ service cloud.firestore {
     match /users/{userId} {
       // Users can read/write their own data
       allow read, write: if request.auth != null && request.auth.uid == userId;
-      // Admin can read all user data
-      allow read: if isAdmin();
+      // Admin can read/write ALL user data (for token management)
+      allow read, write: if isAdmin();
     }
 
     // ── Markets ──────────────────────────────────────────────────────
@@ -21,18 +21,15 @@ service cloud.firestore {
       // Public read for live markets
       allow read: if true;
       
-      // Admin can read all markets (including pending)
-      allow read: if isAdmin();
+      // Admin can read/write all markets
+      allow read, write: if isAdmin();
       
       // Any logged-in user can increment the token counter only
       allow update: if request.auth != null
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tokens']);
 
-      // Any logged-in user can create a market (submission, status: pending)
+      // Any logged-in user can create a market
       allow create: if request.auth != null;
-
-      // Admin can do anything (approve, reject, delete, etc.)
-      allow write: if isAdmin();
 
       // ── Votes subcollection ───────────────────────────────────────
       match /votes/{voteId} {
