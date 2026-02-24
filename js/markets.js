@@ -276,6 +276,9 @@ function _renderMarketCard(m, container) {
         ${hasVoted ? `<span style="font-family:var(--font-mono);font-size:0.62rem;color:var(--white3);
                               background:var(--white1);border:1px solid var(--border2);
                               padding:0.1rem 0.4rem;border-radius:4px;">✓ Predicted</span>` : ''}
+        <button class="read-btn" onclick="event.stopPropagation();openReadModal('${marketId}')">
+          Read
+        </button>
       </div>
       <button onclick="event.stopPropagation();shareMarket('${marketId}','${escHtml(m.question).replace(/'/g, "\\'")}','markets')"
               style="background:var(--white1);border:none;border-radius:50%;width:34px;height:34px;min-width:34px;
@@ -395,7 +398,7 @@ function openVote(marketId, preselectedOpt, e) {
     <div class="modal" style="max-width:420px;padding:0;overflow:hidden;
                                background:var(--off-black);border:1px solid var(--border2);">
       <!-- Header -->
-      <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);">
+      <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);flex-shrink:0;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.75rem;">
           <div style="flex:1;min-width:0;">
             <div style="font-size:0.68rem;color:var(--green);opacity:0.8;text-transform:uppercase;
@@ -412,8 +415,10 @@ function openVote(marketId, preselectedOpt, e) {
         </div>
       </div>
 
-      <!-- AI Market Context Panel (populated async by groq.js) -->
-      <div id="groq-context-panel" style="display:none;"></div>
+      <!-- Scrollable Content Area -->
+      <div style="overflow-y:auto;max-height:calc(85vh - 200px);">
+        <!-- AI Market Context Panel (populated async by groq.js) -->
+        <div id="groq-context-panel" style="display:none;"></div>
 
       <!-- Outcome + Amount -->
       <div style="padding:1.25rem 1.5rem;">
@@ -508,8 +513,10 @@ function openVote(marketId, preselectedOpt, e) {
         </div>
       </div>
 
+      </div>
+
       <!-- Confirm -->
-      <div style="padding:0.75rem 1.5rem 1.5rem;">
+      <div style="padding:0.75rem 1.5rem 1.5rem;border-top:1px solid var(--border);flex-shrink:0;background:var(--off-black);">
         <button id="confirm-vote-btn" onclick="confirmPolymarketVote()"
                 style="width:100%;padding:0.95rem;
                        background:${preselectedOpt ? 'var(--green)' : 'var(--white1)'};
@@ -562,6 +569,112 @@ function closePolymarketVoteModal() {
   }
   State.selectedVoteOption = null;
   State.activeMarketId     = null;
+}
+
+// ── Open Read Modal (Read-only mode to view AI Summary) ─────────────────
+function openReadModal(marketId) {
+  const id = String(marketId);
+  const m  = findMarketById(id);
+  if (!m) {
+    if (!demoMode && db) fetchAndShowMarketModal(id);
+    else showToast('Market not found', 'red');
+    return;
+  }
+
+  State.activeMarketId = id;
+  State.selectedVoteOption = null;
+
+  const pctA   = m.pctA || 50;
+  const pctB   = 100 - pctA;
+  const oddsA  = pctA > 0 ? (100 / pctA).toFixed(2) : '∞';
+  const oddsB  = pctB > 0 ? (100 / pctB).toFixed(2) : '∞';
+  const total  = m.totalTokens || m.tokens || 0;
+  const dLeft  = getDaysRemaining(m.ends);
+
+  let modal = document.getElementById('polymarket-vote-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id        = 'polymarket-vote-modal';
+    modal.className = 'modal-overlay';
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = `
+    <div class="modal" style="max-width:420px;padding:0;overflow:hidden;
+                               background:var(--off-black);border:1px solid var(--border2);">
+      <!-- Header -->
+      <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);flex-shrink:0;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.75rem;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:0.68rem;color:var(--green);opacity:0.8;text-transform:uppercase;
+                        letter-spacing:0.1em;margin-bottom:0.25rem;">${escHtml(m.cat || '')}</div>
+            <h3 style="font-size:0.95rem;line-height:1.45;margin:0;color:var(--white);">${escHtml(m.question)}</h3>
+          </div>
+          <button onclick="closePolymarketVoteModal()"
+                  style="background:none;border:none;color:var(--white3);font-size:1.4rem;cursor:pointer;
+                         padding:0;width:32px;height:32px;display:flex;align-items:center;
+                         justify-content:center;border-radius:50%;flex-shrink:0;">✕</button>
+        </div>
+        <div style="margin-top:0.5rem;font-size:0.72rem;color:var(--white3);font-family:var(--font-mono);">
+          ${dLeft ? dLeft + ' · ' : ''}${total.toLocaleString()} tokens pooled
+        </div>
+      </div>
+
+      <!-- Scrollable Content Area -->
+      <div style="overflow-y:auto;max-height:calc(85vh - 140px);padding:1.25rem 1.5rem;">
+        <!-- AI Market Context Panel (populated async by groq.js) -->
+        <div id="groq-context-panel" style="display:none;margin:0 0 1rem 0;"></div>
+
+        <!-- Market Stats -->
+        <div style="display:flex;flex-direction:column;gap:0.55rem;margin-bottom:1.5rem;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.875rem 1rem;
+                      background:var(--dark);border:1px solid var(--border2);border-radius:10px;">
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+              <span style="font-weight:600;color:var(--white);font-size:0.9rem;">${escHtml(m.optA || 'Yes')}</span>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:1.1rem;font-weight:800;color:var(--green);opacity:0.9;">${pctA}%</div>
+              <div style="font-size:0.65rem;color:var(--white3);">${oddsA}x payout</div>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.875rem 1rem;
+                      background:var(--dark);border:1px solid var(--border2);border-radius:10px;">
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+              <span style="font-weight:600;color:var(--white);font-size:0.9rem;">${escHtml(m.optB || 'No')}</span>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:1.1rem;font-weight:800;color:var(--red);opacity:0.9;">${pctB}%</div>
+              <div style="font-size:0.65rem;color:var(--white3);">${oddsB}x payout</div>
+            </div>
+          </div>
+        </div>
+
+        <p style="font-size:0.8rem;color:var(--white3);line-height:1.6;margin:0 0 1rem 0;">
+          Read the AI briefing above to understand the market context, then click below to place your prediction.
+        </p>
+      </div>
+
+      <!-- Footer Actions -->
+      <div style="padding:0.75rem 1.5rem 1.5rem;border-top:1px solid var(--border);flex-shrink:0;background:var(--off-black);">
+        <button onclick="closePolymarketVoteModal();setTimeout(()=>openVote('${id}',null,null),300);"
+                style="width:100%;padding:0.95rem;background:var(--green);color:var(--black);
+                       border:none;border-radius:10px;font-size:0.95rem;font-weight:700;
+                       cursor:pointer;transition:all 0.2s;">
+          Place Prediction →
+        </button>
+      </div>
+    </div>
+  `;
+
+  modal.style.display = 'flex';
+  void modal.offsetWidth;
+  modal.classList.add('active');
+
+  // Load AI context async — non-blocking
+  if (typeof loadAndInjectContext === 'function') {
+    loadAndInjectContext(id, m.question, m.cat || '');
+  }
 }
 
 let currentOdds = 1;
