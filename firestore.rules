@@ -2,23 +2,28 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Users ────────────────────────────────────────────────────────
-    match /users/{userId} {
-      allow read:  if request.auth != null && request.auth.uid == userId;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
     // ── Helper function for admin check ──────────────────────────────
     function isAdmin() {
       return request.auth != null 
-        && request.auth.token.email.lower() == 'founder@crowdverse.in';
+        && request.auth.token.email == 'founder@crowdverse.in';
+    }
+
+    // ── Users ────────────────────────────────────────────────────────
+    match /users/{userId} {
+      // Users can read/write their own data
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Admin can read all user data
+      allow read: if isAdmin();
     }
 
     // ── Markets ──────────────────────────────────────────────────────
     match /markets/{marketId} {
-      // Public read — required for the real-time listener to work unauthed
+      // Public read for live markets
       allow read: if true;
-
+      
+      // Admin can read all markets (including pending)
+      allow read: if isAdmin();
+      
       // Any logged-in user can increment the token counter only
       allow update: if request.auth != null
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tokens']);
