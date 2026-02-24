@@ -466,10 +466,29 @@ async function submitCreateMarket() {
 
   if (!demoMode && db) {
     try {
-      // Use a batch to atomically create market AND deduct tokens
-      const batch = db.batch();
-      
+      const userRef  = db.collection('users').doc(State.currentUser.uid);
       const marketRef = db.collection('markets').doc();
+
+      // ── Re-fetch latest token balance to prevent stale-state bugs ───
+      let latestTokens = State.userTokens;
+      try {
+        const snap = await userRef.get();
+        if (snap.exists && typeof snap.data().tokens === 'number') {
+          latestTokens = snap.data().tokens;
+          State.userTokens = latestTokens; // sync local state
+          updateTokenDisplay();
+        }
+      } catch (_) { /* use local value if fetch fails */ }
+
+      if (latestTokens < 10) {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit Poll (10 tokens)'; }
+        showToast('Not enough tokens to submit a poll', 'red');
+        return;
+      }
+
+      // ── Batch: save market + deduct tokens atomically ────────────────
+      const batch = db.batch();
+
       batch.set(marketRef, {
         ...newMarket,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -477,16 +496,15 @@ async function submitCreateMarket() {
       newMarket.firestoreId = marketRef.id;
       newMarket.id          = marketRef.id;
 
-      // Atomically deduct tokens from user
-      const userRef = db.collection('users').doc(State.currentUser.uid);
-      batch.update(userRef, {
+      // set+merge works even if user doc doesn't exist yet (unlike update)
+      batch.set(userRef, {
         tokens: firebase.firestore.FieldValue.increment(-10)
-      });
-      
+      }, { merge: true });
+
       await batch.commit();
-      
-      // Only deduct locally after successful commit
-      State.userTokens -= 10;
+
+      // Only deduct locally AFTER confirmed Firestore commit
+      State.userTokens = latestTokens - 10;
       updateTokenDisplay();
     } catch (e) {
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit Poll (10 tokens)'; }
@@ -494,7 +512,7 @@ async function submitCreateMarket() {
       return;
     }
   } else {
-    // Demo mode - just deduct locally
+    // Demo mode — just deduct locally
     State.userTokens -= 10;
     updateTokenDisplay();
   }
