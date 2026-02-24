@@ -147,6 +147,43 @@ function updateVoteModalOdds(market) {
 async function loadAndRenderMarkets() {
   startMarketsListener();
   renderMarkets();
+
+  // ── Fallback one-time fetch ───────────────────────────────────────
+  // If the real-time listener takes too long or fails silently,
+  // do a direct .get() to ensure markets always appear on page load.
+  if (!demoMode && db) {
+    try {
+      const snap = await db.collection('markets')
+        .where('status', 'in', ['live', 'approved'])
+        .get();
+
+      if (snap.empty) return; // Nothing to show
+
+      const fetched = [];
+      snap.forEach(doc => {
+        const data = doc.data();
+        fetched.push({ id: doc.id, firestoreId: doc.id, ...data, status: 'live' });
+      });
+
+      // Merge with any markets already loaded by the listener
+      const existingIds = new Set(State.firestoreMarkets.map(m => m.firestoreId));
+      let changed = false;
+      fetched.forEach(m => {
+        if (!existingIds.has(m.firestoreId)) {
+          State.firestoreMarkets.push(m);
+          changed = true;
+        }
+      });
+
+      if (changed) {
+        renderMarkets(_currentMarketFilter);
+        if (typeof updateHomeMarketsPreview === 'function') updateHomeMarketsPreview();
+        fetched.forEach(m => startMarketVotesListener(m.firestoreId));
+      }
+    } catch (e) {
+      console.warn('Fallback markets fetch failed:', e);
+    }
+  }
 }
 
 // ── Render all markets on the Markets page ────────────────────────────
