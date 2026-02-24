@@ -9,7 +9,7 @@
 // ── Your Cloud Function URL ───────────────────────────────────────────
 // After deploying, replace this with your real function URL.
 // Format: https://asia-south1-YOUR_PROJECT_ID.cloudfunctions.net/groqContext
-const GROQ_PROXY_URL = 'https://us-central1-crowdverse-dev1.cloudfunctions.net/groqContext';
+const GROQ_PROXY_URL = 'https://crowdverse.founder-38c.workers.dev';
 // ── In-session cache so we don't re-call for the same market ─────────
 const _groqContextCache = {};
 
