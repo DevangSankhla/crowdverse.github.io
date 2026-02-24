@@ -20,7 +20,8 @@ const ALLOWED_ORIGINS = [
   'http://127.0.0.1',
   'https://crowdverse-dev1.web.app',
   'https://crowdverse-dev1.firebaseapp.com',
-  // 'https://yourcustomdomain.com',  ← add yours here
+  'https://crowdverse.in',
+  'https://www.crowdverse.in',
 ];
 
 // ── Rate limit: max 30 calls per IP per hour (in-memory, resets on cold start) ──
