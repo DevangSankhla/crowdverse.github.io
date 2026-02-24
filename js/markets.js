@@ -807,7 +807,21 @@ async function confirmPolymarketVote() {
   
   const amount = parseInt(slider.value, 10);
   if (!amount || amount < 10) { showToast('Minimum stake is 10 tokens', 'yellow'); return; }
-  if (amount > State.userTokens) { showToast('Not enough tokens!', 'red'); return; }
+
+  // Fetch fresh token balance from Firestore to prevent stale-state bugs
+  let freshTokens = State.userTokens;
+  if (!demoMode && db && State.currentUser) {
+    try {
+      const userSnap = await db.collection('users').doc(State.currentUser.uid).get();
+      if (userSnap.exists && typeof userSnap.data().tokens === 'number') {
+        freshTokens = userSnap.data().tokens;
+        State.userTokens = freshTokens; // sync local state
+        updateTokenDisplay();
+      }
+    } catch (_) { /* use local value if fetch fails */ }
+  }
+  
+  if (amount > freshTokens) { showToast('Not enough tokens!', 'red'); return; }
 
   const m = findMarketById(String(State.activeMarketId));
   if (!m) { showToast('Market not found', 'red'); return; }
@@ -840,8 +854,8 @@ async function confirmPolymarketVote() {
     createdAt:   new Date().toISOString()
   };
 
-  // Optimistic local update
-  State.userTokens -= amount;
+  // Optimistic local update (ensure never goes below 0)
+  State.userTokens = Math.max(0, State.userTokens - amount);
   State.userPredictions.push(predictionEntry);
 
   // Disable confirm button immediately to prevent double-submit

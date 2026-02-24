@@ -512,8 +512,8 @@ async function submitCreateMarket() {
       return;
     }
   } else {
-    // Demo mode — just deduct locally
-    State.userTokens -= 10;
+    // Demo mode — just deduct locally (ensure never goes below 0)
+    State.userTokens = Math.max(0, State.userTokens - 10);
     updateTokenDisplay();
   }
 
@@ -727,8 +727,8 @@ async function saveUsername() {
   // Check for empty after sanitization
   if (!newName || newName.length < 2) { showToast('Username contains invalid characters', 'yellow'); return; }
 
-  // Optimistic deduction
-  State.userTokens -= 50;
+  // Optimistic deduction (ensure never goes below 0)
+  State.userTokens = Math.max(0, State.userTokens - 50);
   updateTokenDisplay();
 
   try {
