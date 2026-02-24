@@ -1,11 +1,15 @@
 export default {
   async fetch(request, env, ctx) {
+    const allowedOrigins = ['https://crowdverse.in', 'https://www.crowdverse.in', 'http://localhost:3000', 'http://127.0.0.1:5500'];
+    const origin = request.headers.get('Origin') || '*';
+    const allowOrigin = allowedOrigins.includes(origin) ? origin : '*';
+
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, {
         status: 204,
         headers: {
-          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Origin': allowOrigin,
           'Access-Control-Allow-Methods': 'POST, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type',
           'Access-Control-Max-Age': '86400'
@@ -18,20 +22,21 @@ export default {
         status: 405,
         headers: {
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
+          'Access-Control-Allow-Origin': allowOrigin
         }
       });
     }
 
     try {
-      const { question, category, marketId } = await request.json();
+      const body = await request.json();
+      const { question, category, marketId } = body;
       
       if (!question || !marketId) {
         return new Response(JSON.stringify({ error: 'Missing fields' }), {
           status: 400,
           headers: {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
+            'Access-Control-Allow-Origin': allowOrigin
           }
         });
       }
@@ -42,7 +47,7 @@ export default {
           status: 500,
           headers: {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
+            'Access-Control-Allow-Origin': allowOrigin
           }
         });
       }
@@ -78,11 +83,13 @@ Be factual and neutral. Never make a direct prediction. Tailor to an Indian audi
       });
 
       if (!response.ok) {
-        return new Response(JSON.stringify({ error: 'AI error' }), {
+        const errorText = await response.text();
+        console.error('Groq API error:', errorText);
+        return new Response(JSON.stringify({ error: 'AI error', details: errorText }), {
           status: 502,
           headers: {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
+            'Access-Control-Allow-Origin': allowOrigin
           }
         });
       }
@@ -93,16 +100,18 @@ Be factual and neutral. Never make a direct prediction. Tailor to an Indian audi
       return new Response(JSON.stringify({ context: context || 'No briefing available' }), {
         headers: {
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
+          'Access-Control-Allow-Origin': allowOrigin,
+          'Cache-Control': 'public, max-age=300'
         }
       });
 
     } catch (err) {
-      return new Response(JSON.stringify({ error: 'Internal error' }), {
+      console.error('Worker error:', err);
+      return new Response(JSON.stringify({ error: 'Internal error', message: err.message }), {
         status: 500,
         headers: {
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
+          'Access-Control-Allow-Origin': allowOrigin
         }
       });
     }
