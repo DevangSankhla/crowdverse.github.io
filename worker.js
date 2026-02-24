@@ -43,7 +43,7 @@ export default {
 
       const groqKey = env.GROQ_KEY;
       if (!groqKey) {
-        return new Response(JSON.stringify({ error: 'Not configured' }), {
+        return new Response(JSON.stringify({ error: 'Not configured', debug: 'GROQ_KEY missing' }), {
           status: 500,
           headers: {
             'Content-Type': 'application/json',
@@ -68,24 +68,34 @@ Write a tight 3-4 sentence briefing covering:
 
 Be factual and neutral. Never make a direct prediction. Tailor to an Indian audience.`;
 
+      const groqBody = JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 220,
+        temperature: 0.25
+      });
+
+      console.log('Sending request to Groq with key:', groqKey.slice(0, 10) + '...');
+
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${groqKey}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          model: 'llama-3.1-8b-instant',
-          messages: [{ role: 'user', content: prompt }],
-          max_tokens: 220,
-          temperature: 0.25
-        })
+        body: groqBody
       });
+
+      console.log('Groq response status:', response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Groq API error:', errorText);
-        return new Response(JSON.stringify({ error: 'AI error', details: errorText }), {
+        console.error('Groq API error:', response.status, errorText);
+        return new Response(JSON.stringify({ 
+          error: 'AI error', 
+          status: response.status,
+          details: errorText 
+        }), {
           status: 502,
           headers: {
             'Content-Type': 'application/json',
