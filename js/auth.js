@@ -226,9 +226,11 @@ if (!demoMode && typeof auth !== 'undefined') {
       await loadUserData();
       updateNavForAuth();
       updateTokenDisplay();
-      updateHeroCta(); // ← Update CTA after session restore
+      updateHeroCta();
       if (typeof checkUserNotifications === 'function') checkUserNotifications();
-      if (typeof checkWeeklyBonus === 'function') checkWeeklyBonus();
+      if (typeof checkWeeklyBonus       === 'function') checkWeeklyBonus();
+      // Start markets listener immediately on auth so markets are ready
+      if (typeof startMarketsListener   === 'function') startMarketsListener();
     }
   });
 }
