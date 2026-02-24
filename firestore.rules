@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Users ────────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read:  if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ── Helper function for admin check ──────────────────────────────
+    function isAdmin() {
+      return request.auth != null 
+        && request.auth.token.email.lower() == 'founder@crowdverse.in';
+    }
+
+    // ── Markets ──────────────────────────────────────────────────────
+    match /markets/{marketId} {
+      // Public read — required for the real-time listener to work unauthed
+      allow read: if true;
+
+      // Any logged-in user can increment the token counter only
+      allow update: if request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tokens']);
+
+      // Any logged-in user can create a market (submission, status: pending)
+      allow create: if request.auth != null;
+
+      // Admin can do anything (approve, reject, delete, etc.)
+      allow write: if isAdmin();
+
+      // ── Votes subcollection ───────────────────────────────────────
+      match /votes/{voteId} {
+        allow read:          if request.auth != null;
+        allow create:        if request.auth != null
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.amount is number
+          && request.resource.data.amount >= 10;
+        allow update, delete: if false;
+      }
+    }
+
+    // ── Notifications ─────────────────────────────────────────────────
+    match /notifications/{notifId} {
+      allow read:  if request.auth != null && resource.data.userId == request.auth.uid;
+      allow write: if isAdmin();
+    }
+  }
+}

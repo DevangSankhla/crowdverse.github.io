@@ -117,9 +117,17 @@ function onAuthSuccess(isNew) {
     closeAuth();
     showToast('Welcome back! 👋', 'green');
   }
+  
+  // Update all UI state
   updateNavForAuth();
   updateTokenDisplay();
-  updateHeroCta(); // ← Update home CTA immediately
+  updateHeroCta();
+  
+  // Refresh admin link visibility immediately
+  const adminLink = document.getElementById('admin-nav-link');
+  if (adminLink && typeof isAdmin === 'function') {
+    adminLink.style.display = (isAdmin()) ? '' : 'none';
+  }
 
   if (typeof checkUserNotifications === 'function') checkUserNotifications();
 }
@@ -222,15 +230,34 @@ async function checkWeeklyBonus() {
 if (!demoMode && typeof auth !== 'undefined') {
   auth.onAuthStateChanged(async user => {
     if (user) {
+      console.log('Auth state: User logged in', user.email);
       State.currentUser = user;
       await loadUserData();
       updateNavForAuth();
       updateTokenDisplay();
       updateHeroCta();
+      
+      // Update admin link visibility
+      const adminLink = document.getElementById('admin-nav-link');
+      if (adminLink && typeof isAdmin === 'function') {
+        adminLink.style.display = (isAdmin()) ? '' : 'none';
+        if (isAdmin()) {
+          console.log('Admin user detected:', user.email);
+        }
+      }
+      
       if (typeof checkUserNotifications === 'function') checkUserNotifications();
       if (typeof checkWeeklyBonus       === 'function') checkWeeklyBonus();
       // Start markets listener immediately on auth so markets are ready
       if (typeof startMarketsListener   === 'function') startMarketsListener();
+    } else {
+      console.log('Auth state: User logged out');
+      State.currentUser = null;
+      updateNavForAuth();
+      
+      // Hide admin link on logout
+      const adminLink = document.getElementById('admin-nav-link');
+      if (adminLink) adminLink.style.display = 'none';
     }
   });
 }

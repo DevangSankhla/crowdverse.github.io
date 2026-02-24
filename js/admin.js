@@ -6,11 +6,19 @@ const ADMIN_EMAIL = 'founder@crowdverse.in';
 
 function isAdmin() {
   // Client-side check only - actual security is enforced by Firestore rules
-  const email = State.currentUser?.email;
+  if (!State.currentUser) return false;
+  
+  const email = State.currentUser.email;
   if (!email) return false;
+  
   // Prevent trivial console manipulation by checking email format
   if (typeof email !== 'string' || !email.includes('@')) return false;
-  return email === ADMIN_EMAIL;
+  
+  // Normalize email comparison (lowercase for case-insensitive comparison)
+  const normalizedEmail = email.toLowerCase().trim();
+  const normalizedAdmin = ADMIN_EMAIL.toLowerCase().trim();
+  
+  return normalizedEmail === normalizedAdmin;
 }
 
 let _adminMarketsCache = {};
@@ -24,8 +32,12 @@ async function renderAdminPage() {
   if (!State.currentUser) {
     if (wall)    wall.style.display    = '';
     if (content) content.style.display = 'none';
+    // Redirect to home if not logged in
+    showToast('Please log in to access admin panel.', 'yellow');
+    showPage('home');
     return;
   }
+  
   if (!isAdmin()) {
     showToast('⛔ Admin access only.', 'red');
     showPage('home');
@@ -119,6 +131,12 @@ function _buildAdminPanelHtml(container) {
 // ── Load all data from Firestore ──────────────────────────────────────
 async function loadAdminData() {
   if (demoMode || !db) { _renderAdminDemoFallback(); return; }
+  
+  // Verify admin before attempting
+  if (!isAdmin()) {
+    showToast('⛔ Admin access required', 'red');
+    return;
+  }
 
   ['admin-pending-list','admin-live-list','admin-accounts-list'].forEach(id => {
     const el = document.getElementById(id);
@@ -349,7 +367,16 @@ function _renderAdminAccounts(users) {
 
 // ── Admin adjust tokens (quick ±100) ─────────────────────────────────
 async function adminAdjustTokens(uid, userName, isAdd) {
-  if (!db) return;
+  if (demoMode || !db) {
+    showToast('Cannot adjust tokens in demo mode', 'red');
+    return;
+  }
+  
+  // Verify admin before attempting
+  if (!isAdmin()) {
+    showToast('⛔ Admin access required', 'red');
+    return;
+  }
   const amount = isAdd ? 100 : -100;
   try {
     await db.collection('users').doc(uid).update({
@@ -450,10 +477,20 @@ function openAdminUserModal(uid) {
 
 // ── Custom token adjustment from user modal ───────────────────────────
 async function adminAdjustTokensCustom(uid, userName, isAdd) {
+  if (demoMode || !db) {
+    showToast('Cannot adjust tokens in demo mode', 'red');
+    return;
+  }
+  
+  // Verify admin before attempting
+  if (!isAdmin()) {
+    showToast('⛔ Admin access required', 'red');
+    return;
+  }
+  
   const input  = document.getElementById('admin-token-adjust-amount');
   const amount = parseInt(input?.value) || 0;
   if (amount <= 0) { showToast('Enter a valid amount', 'yellow'); return; }
-  if (!db) return;
 
   const delta = isAdd ? amount : -amount;
   try {
@@ -479,17 +516,44 @@ async function adminAdjustTokensCustom(uid, userName, isAdd) {
 
 // ── Approve a market ──────────────────────────────────────────────────
 async function approveMarket(docId) {
-  if (!db) return;
+  if (demoMode || !db) {
+    showToast('Cannot approve in demo mode', 'red');
+    return;
+  }
+  
+  // Verify admin before attempting
+  if (!isAdmin()) {
+    showToast('⛔ Admin access required', 'red');
+    return;
+  }
+  
   const approveBtn = document.getElementById('approve-btn-' + docId);
   const rejectBtn  = document.getElementById('reject-btn-'  + docId);
   if (approveBtn) { approveBtn.textContent = 'Approving…'; approveBtn.disabled = true; }
   if (rejectBtn)  rejectBtn.disabled = true;
 
   try {
-    await db.collection('markets').doc(docId).update({
-      status:     'live',
-      approvedAt: firebase.firestore.FieldValue.serverTimestamp()
+    // Use a transaction to ensure atomic update
+    await db.runTransaction(async (transaction) => {
+      const mktRef = db.collection('markets').doc(docId);
+      const mktDoc = await transaction.get(mktRef);
+      
+      if (!mktDoc.exists) {
+        throw new Error('Market not found');
+      }
+      
+      const data = mktDoc.data();
+      if (data.status !== 'pending') {
+        throw new Error('Market is not pending approval');
+      }
+      
+      transaction.update(mktRef, {
+        status:     'live',
+        approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        approvedBy: State.currentUser.uid
+      });
     });
+    
     const card = document.getElementById('admin-mkt-' + docId);
     if (card) { card.style.opacity = '0'; card.style.transform = 'translateX(30px)'; setTimeout(() => card.remove(), 380); }
     const el     = document.getElementById('admin-stat-pending');
@@ -506,7 +570,16 @@ async function approveMarket(docId) {
 
 // ── Reject a market — NO refund ───────────────────────────────────────
 async function rejectMarket(docId) {
-  if (!db) return;
+  if (demoMode || !db) {
+    showToast('Cannot reject in demo mode', 'red');
+    return;
+  }
+  
+  // Verify admin before attempting
+  if (!isAdmin()) {
+    showToast('⛔ Admin access required', 'red');
+    return;
+  }
   const m          = _adminMarketsCache[docId];
   if (!m) { showToast('Market data not found', 'red'); return; }
 
@@ -554,7 +627,16 @@ async function rejectMarket(docId) {
 
 // ── VETO delete a live market ─────────────────────────────────────────
 async function deleteMarket(docId) {
-  if (!db) return;
+  if (demoMode || !db) {
+    showToast('Cannot delete in demo mode', 'red');
+    return;
+  }
+  
+  // Verify admin before attempting
+  if (!isAdmin()) {
+    showToast('⛔ Admin access required', 'red');
+    return;
+  }
   if (!confirm('⚠️ VETO DELETE: This will permanently remove the market. Continue?')) return;
 
   const vetoBtn = document.getElementById('veto-btn-' + docId);

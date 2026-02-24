@@ -6,10 +6,18 @@
  * Navigate to a named page.
  */
 function showPage(id) {
-  if (id === 'admin' && !isAdmin()) {
-    if (!State.currentUser) { openAuth(); return; }
-    showToast('⛔ Admin access only.', 'red');
-    return;
+  // Special handling for admin page - check if isAdmin function exists first
+  if (id === 'admin') {
+    const isUserAdmin = typeof isAdmin === 'function' ? isAdmin() : false;
+    if (!isUserAdmin) {
+      if (!State.currentUser) { 
+        openAuth(); 
+        return; 
+      }
+      showToast('⛔ Admin access only.', 'red');
+      showPage('home');
+      return;
+    }
   }
 
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));

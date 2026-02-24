@@ -578,15 +578,21 @@ function scrollToConfirmButton() {
 
 function selectOutcome(opt, prob, odds) {
   State.selectedVoteOption = opt;
-  currentOdds = parseFloat(odds) || 2;
   
-  // Also update the market's stored odds to ensure consistency
+  // Calculate current odds from the market data to ensure consistency
   const m = findMarketById(String(State.activeMarketId));
   if (m) {
     const pctA = m.pctA || 50;
     const pctB = 100 - pctA;
-    if (opt === 'a' && pctA > 0) currentOdds = 100 / pctA;
-    if (opt === 'b' && pctB > 0) currentOdds = 100 / pctB;
+    if (opt === 'a' && pctA > 0) {
+      currentOdds = 100 / pctA;
+    } else if (opt === 'b' && pctB > 0) {
+      currentOdds = 100 / pctB;
+    } else {
+      currentOdds = parseFloat(odds) || 2;
+    }
+  } else {
+    currentOdds = parseFloat(odds) || 2;
   }
 
   document.querySelectorAll('.outcome-btn').forEach(btn => {
@@ -652,11 +658,26 @@ function updatePotentialWinnings() {
   const slider = document.getElementById('vote-amount-slider');
   const input  = document.getElementById('vote-amount-input');
   if (!slider || !input) return;
-  const amount = parseInt(slider.value) || 50;
+  
+  // Clamp amount between 10 and user's tokens
+  let amount = parseInt(slider.value) || 50;
+  amount = Math.max(10, Math.min(amount, State.userTokens));
+  
+  slider.value = amount;
   input.value  = amount;
-  const potReturn = Math.floor(amount * currentOdds);
-  const returnEl  = document.getElementById('potential-return');
-  if (returnEl) returnEl.textContent = State.selectedVoteOption ? '+' + potReturn : '—';
+  
+  // Only show potential return if an option is selected
+  const returnEl = document.getElementById('potential-return');
+  const mulEl = document.getElementById('payout-multiplier');
+  
+  if (State.selectedVoteOption) {
+    const potReturn = Math.floor(amount * currentOdds);
+    if (returnEl) returnEl.textContent = '+' + potReturn.toLocaleString();
+    if (mulEl) mulEl.textContent = currentOdds.toFixed(2) + 'x';
+  } else {
+    if (returnEl) returnEl.textContent = '—';
+    if (mulEl) mulEl.textContent = '—';
+  }
 }
 
 // ── Prevent double submission lock ────────────────────────────────────
@@ -667,43 +688,32 @@ async function confirmPolymarketVote() {
   if (_isSubmittingPrediction) { return; } // Prevent double-click
   if (!State.selectedVoteOption) { showToast('Select an outcome first', 'yellow'); return; }
 
-  // ── Attention gate: user must confirm they've read the context ──────
-  const slider  = document.getElementById('vote-amount-slider');
-  const amount  = parseInt(slider?.value, 10) || 50;
-  const m       = findMarketById(String(State.activeMarketId));
-  if (!m) { showToast('Market not found', 'red'); return; }
-  const optLabel = State.selectedVoteOption === 'a' ? (m.optA || 'Yes') : (m.optB || 'No');
-  const pctA     = m.pctA || 50;
-  const pctB     = 100 - pctA;
-  const liveOdds = State.selectedVoteOption === 'a'
-    ? (pctA > 0 ? 100 / pctA : 2)
-    : (pctB > 0 ? 100 / pctB : 2);
-  const potentialWin = Math.floor(amount * liveOdds);
-
-  const confirmed = await showAttentionOverlay(optLabel, amount, potentialWin);
-  if (!confirmed) return; // User bailed
-  // ── End attention gate ─────────────────────────────────────────────
-  
-  _isSubmittingPrediction = true;
-
+  // Get the slider and validate market exists
   const slider = document.getElementById('vote-amount-slider');
-  if (!slider) { _isSubmittingPrediction = false; return; }
-  const amount = parseInt(slider.value, 10);
-  if (!amount || amount < 10)          { _isSubmittingPrediction = false; showToast('Minimum stake is 10 tokens', 'yellow'); return; }
-  if (amount > State.userTokens)       { _isSubmittingPrediction = false; showToast('Not enough tokens!', 'red'); return; }
-
-  const m        = findMarketById(String(State.activeMarketId));
-  if (!m) { _isSubmittingPrediction = false; showToast('Market not found', 'red'); return; }
-
-  const optLabel    = State.selectedVoteOption === 'a' ? (m.optA || 'Yes') : (m.optB || 'No');
+  if (!slider) { return; }
   
-  // Recalculate odds to ensure we have the correct value
+  const amount = parseInt(slider.value, 10);
+  if (!amount || amount < 10) { showToast('Minimum stake is 10 tokens', 'yellow'); return; }
+  if (amount > State.userTokens) { showToast('Not enough tokens!', 'red'); return; }
+
+  const m = findMarketById(String(State.activeMarketId));
+  if (!m) { showToast('Market not found', 'red'); return; }
+
+  // Calculate odds and potential win
   const pctA   = m.pctA || 50;
   const pctB   = 100 - pctA;
   const oddsA  = pctA > 0 ? (100 / pctA) : 2;
   const oddsB  = pctB > 0 ? (100 / pctB) : 2;
   const liveOdds = State.selectedVoteOption === 'a' ? oddsA : oddsB;
   const potentialWin = Math.floor(amount * liveOdds);
+  const optLabel = State.selectedVoteOption === 'a' ? (m.optA || 'Yes') : (m.optB || 'No');
+
+  // ── Attention gate: user must confirm they've read the context ──────
+  const confirmed = await showAttentionOverlay(optLabel, amount, potentialWin);
+  if (!confirmed) return; // User bailed
+  // ── End attention gate ─────────────────────────────────────────────
+  
+  _isSubmittingPrediction = true;
   
   // Build prediction entry - ensure no undefined values
   const predictionEntry = {
@@ -730,84 +740,52 @@ async function confirmPolymarketVote() {
     btn.style.cursor = 'not-allowed';
   }
 
-  console.log('Prediction check:', { demoMode, hasDb: !!db, hasUser: !!State.currentUser, uid: State.currentUser?.uid });
-  
+  // Use a batch write for atomic operations
   if (!demoMode && db && State.currentUser) {
     try {
-      console.log('Submitting prediction to Firestore:', { marketId: State.activeMarketId, amount, option: State.selectedVoteOption });
-      
       const userRef = db.collection('users').doc(State.currentUser.uid);
-      let userSnap;
-      try {
-        userSnap = await userRef.get();
-      } catch (e) {
-        throw new Error('Cannot read user: ' + e.message);
-      }
+      const mktRef = db.collection('markets').doc(State.activeMarketId);
+      const voteRef = mktRef.collection('votes').doc();
       
-      // Create user doc if it doesn't exist
-      if (!userSnap.exists) {
-        console.log('Creating user document...');
-        try {
-          await userRef.set({
-            tokens: 1000,
-            predictions: [],
-            displayName: State.currentUser.displayName || State.currentUser.email?.split('@')[0] || 'User',
-            email: State.currentUser.email,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-        } catch (e) {
-          throw new Error('Cannot create user: ' + e.message);
-        }
-      }
-      
+      // Verify user has sufficient tokens before batch
+      const userSnap = await userRef.get();
       const userData = userSnap.exists ? userSnap.data() : { tokens: 1000 };
-      if ((userData.tokens || 0) < amount) {
-        throw new Error('Insufficient tokens');
+      const currentTokens = userData.tokens || 1000;
+      
+      if (currentTokens < amount) {
+        State.userTokens += amount;
+        State.userPredictions.pop();
+        if (btn) { btn.disabled = false; btn.textContent = 'Place Prediction'; }
+        _isSubmittingPrediction = false;
+        showToast('Not enough tokens!', 'red');
+        return;
       }
       
-      // Try writing vote first (separate from batch to isolate errors)
-      try {
-        const voteRef = db.collection('markets').doc(State.activeMarketId).collection('votes').doc();
-        await voteRef.set({
-          userId:    State.currentUser.uid,
-          userName:  State.currentUser.displayName || State.currentUser.email?.split('@')[0] || 'User',
-          option:    State.selectedVoteOption,
-          amount:    amount,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        console.log('Vote recorded');
-      } catch (e) {
-        throw new Error('Cannot write vote: ' + e.message);
-      }
+      // Execute batch write for atomicity
+      const batch = db.batch();
       
-      // Update user tokens
-      try {
-        await userRef.update({
-          tokens:      firebase.firestore.FieldValue.increment(-amount),
-          predictions: firebase.firestore.FieldValue.arrayUnion(predictionEntry)
-        });
-        console.log('User updated');
-      } catch (e) {
-        throw new Error('Cannot update user: ' + e.message);
-      }
+      // 1. Record the vote
+      batch.set(voteRef, {
+        userId:    State.currentUser.uid,
+        userName:  State.currentUser.displayName || State.currentUser.email?.split('@')[0] || 'User',
+        option:    State.selectedVoteOption,
+        amount:    amount,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
       
-      // Update market tokens (use set with merge if update fails)
-      try {
-        const mktRef = db.collection('markets').doc(State.activeMarketId);
-        const mktSnap = await mktRef.get();
-        if (mktSnap.exists) {
-          await mktRef.update({
-            tokens: firebase.firestore.FieldValue.increment(amount)
-          });
-        } else {
-          await mktRef.set({ tokens: amount }, { merge: true });
-        }
-        console.log('Market updated');
-      } catch (e) {
-        throw new Error('Cannot update market: ' + e.message);
-      }
+      // 2. Deduct user tokens and add prediction
+      batch.update(userRef, {
+        tokens:      firebase.firestore.FieldValue.increment(-amount),
+        predictions: firebase.firestore.FieldValue.arrayUnion(predictionEntry)
+      });
       
-      console.log('Prediction recorded successfully');
+      // 3. Increment market token pool
+      batch.update(mktRef, {
+        tokens: firebase.firestore.FieldValue.increment(amount)
+      });
+      
+      await batch.commit();
+      
     } catch (e) {
       // Rollback local state on failure
       State.userTokens += amount;
