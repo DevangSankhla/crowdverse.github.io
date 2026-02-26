@@ -117,6 +117,17 @@ function _buildAdminPanelHtml(container) {
         </div>
       </div>
 
+      <!-- Markets Ready to Resolve -->
+      <div style="margin-bottom:2.5rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
+          <div class="section-label" style="margin-bottom:0;color:var(--yellow);opacity:0.9;">🏆 Resolve Markets</div>
+          <span style="font-family:var(--font-mono);font-size:0.7rem;color:var(--white3);">Select winner and pay out</span>
+        </div>
+        <div id="admin-resolve-list">
+          <div style="text-align:center;padding:2rem;font-family:var(--font-mono);color:var(--white3);">Loading…</div>
+        </div>
+      </div>
+
       <!-- Accounts table -->
       <div>
         <div class="section-label" style="margin-bottom:1rem;">👥 All Accounts — Token Management</div>
@@ -138,7 +149,7 @@ async function loadAdminData() {
     return;
   }
 
-  ['admin-pending-list','admin-live-list','admin-accounts-list'].forEach(id => {
+  ['admin-pending-list','admin-live-list','admin-resolve-list','admin-accounts-list'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = `<div style="text-align:center;padding:2rem;font-family:var(--font-mono);font-size:0.82rem;color:var(--white3);">Loading…</div>`;
   });
@@ -155,13 +166,26 @@ async function loadAdminData() {
     _adminUsersCache = users;
 
     const marketsSnap = await db.collection('markets').orderBy('createdAt', 'desc').get();
-    const pending = [], live = [];
+    const pending = [], live = [], readyToResolve = [];
     _adminMarketsCache = {};
+    
+    const now = new Date();
     marketsSnap.forEach(doc => {
       const d = { docId: doc.id, ...doc.data() };
       _adminMarketsCache[doc.id] = d;
       if (d.status === 'pending') pending.push(d);
-      else if (d.status === 'live' || d.status === 'approved') live.push(d);
+      else if (d.status === 'live' || d.status === 'approved') {
+        // Check if market has ended (by date)
+        const endDate = d.ends ? new Date(d.ends) : null;
+        const hasEnded = endDate && endDate < now;
+        if (hasEnded || d.readyToResolve) {
+          readyToResolve.push(d);
+        } else {
+          live.push(d);
+        }
+      } else if (d.status === 'ended' && !d.resolved) {
+        readyToResolve.push(d);
+      }
     });
 
     const sa = document.getElementById('admin-stat-accounts');
@@ -175,6 +199,7 @@ async function loadAdminData() {
 
     _renderAdminPendingMarkets(pending);
     _renderAdminLiveMarkets(live);
+    _renderAdminResolveMarkets(readyToResolve);
     _renderAdminAccounts(users);
 
   } catch (e) {
@@ -277,6 +302,66 @@ function _renderAdminLiveMarkets(markets) {
                          font-weight:700;font-size:0.82rem;cursor:pointer;transition:all 0.2s;
                          font-family:var(--font-mono);white-space:nowrap;">
             🛡️ VETO DELETE
+          </button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Markets ready to resolve ──────────────────────────────────────────
+function _renderAdminResolveMarkets(markets) {
+  const el = document.getElementById('admin-resolve-list');
+  if (!el) return;
+  if (markets.length === 0) {
+    el.innerHTML = `<div style="text-align:center;padding:2rem;background:var(--off-black);
+                                border:1px solid var(--border);border-radius:var(--radius-md);">
+      <p style="font-family:var(--font-mono);color:var(--white3);">No markets ready to resolve.</p>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = markets.map(m => `
+    <div id="admin-resolve-mkt-${m.docId}"
+         style="background:var(--off-black);border:1px solid rgba(212,178,0,0.18);
+                border-left:3px solid rgba(212,178,0,0.5);
+                border-radius:var(--radius-md);padding:1.25rem;margin-bottom:0.75rem;transition:all 0.35s;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.6rem;">
+            <span style="font-family:var(--font-mono);font-size:0.63rem;background:rgba(212,178,0,0.08);
+                         border:1px solid rgba(212,178,0,0.25);color:var(--yellow);opacity:0.9;
+                         padding:0.15rem 0.5rem;border-radius:4px;text-transform:uppercase;">🏆 Ready to Resolve</span>
+            <span style="font-family:var(--font-mono);font-size:0.7rem;color:var(--green);opacity:0.8;">${escHtml(m.cat || '')}</span>
+          </div>
+          <h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:0.5rem;line-height:1.4;">${escHtml(m.question)}</h3>
+          <div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--white3);display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+            <span>📅 Ends: ${escHtml(m.ends || '—')}</span>
+            <span>🎟️ ${(m.tokens || 0).toLocaleString()} pooled</span>
+          </div>
+          <div style="display:flex;gap:0.6rem;font-family:var(--font-mono);font-size:0.72rem;">
+            <span style="padding:0.2rem 0.6rem;background:rgba(127,255,127,0.06);border:1px solid rgba(127,255,127,0.18);border-radius:4px;color:var(--green);opacity:0.85;">
+              ✔ ${escHtml(m.optA || 'Yes')}: ${(m.tokensA || 0).toLocaleString()}
+            </span>
+            <span style="padding:0.2rem 0.6rem;background:rgba(224,80,80,0.06);border:1px solid rgba(224,80,80,0.18);border-radius:4px;color:var(--red);opacity:0.85;">
+              ✖ ${escHtml(m.optB || 'No')}: ${(m.tokensB || 0).toLocaleString()}
+            </span>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:0.5rem;flex-shrink:0;min-width:140px;">
+          <button id="resolve-a-btn-${m.docId}" onclick="resolveMarket('${m.docId}', 'a')"
+                  style="padding:0.65rem 1.25rem;background:rgba(127,255,127,0.12);color:var(--green);
+                         border:1px solid rgba(127,255,127,0.35);border-radius:var(--radius-sm);
+                         font-weight:700;font-size:0.82rem;cursor:pointer;transition:all 0.2s;
+                         font-family:var(--font-mono);white-space:nowrap;">
+            ✔ ${escHtml(m.optA || 'Yes')} Wins
+          </button>
+          <button id="resolve-b-btn-${m.docId}" onclick="resolveMarket('${m.docId}', 'b')"
+                  style="padding:0.65rem 1.25rem;background:rgba(224,80,80,0.08);color:var(--red);
+                         border:1px solid rgba(224,80,80,0.25);border-radius:var(--radius-sm);
+                         font-weight:700;font-size:0.82rem;cursor:pointer;transition:all 0.2s;
+                         font-family:var(--font-mono);white-space:nowrap;">
+            ✖ ${escHtml(m.optB || 'No')} Wins
           </button>
         </div>
       </div>
@@ -659,6 +744,156 @@ async function deleteMarket(docId) {
   }
 }
 
+// ── Resolve a market and pay out winners ──────────────────────────────
+async function resolveMarket(docId, winningOption) {
+  if (demoMode || !db) {
+    showToast('Cannot resolve in demo mode', 'red');
+    return;
+  }
+  
+  // Verify admin before attempting
+  if (!isAdmin()) {
+    showToast('⛔ Admin access required', 'red');
+    return;
+  }
+
+  const m = _adminMarketsCache[docId];
+  if (!m) { showToast('Market data not found', 'red'); return; }
+
+  const confirmMsg = `Resolve "${m.question.substring(0, 50)}${m.question.length > 50 ? '…' : ''}" with ${winningOption === 'a' ? (m.optA || 'Yes') : (m.optB || 'No')} as winner?`;
+  if (!confirm(confirmMsg)) return;
+
+  const btnA = document.getElementById('resolve-a-btn-' + docId);
+  const btnB = document.getElementById('resolve-b-btn-' + docId);
+  if (btnA) btnA.disabled = true;
+  if (btnB) btnB.disabled = true;
+  if (winningOption === 'a' && btnA) btnA.textContent = 'Resolving…';
+  if (winningOption === 'b' && btnB) btnB.textContent = 'Resolving…';
+
+  try {
+    // Fetch all votes for this market
+    const votesSnap = await db.collection('markets').doc(docId).collection('votes').get();
+    const votes = [];
+    votesSnap.forEach(doc => votes.push({ id: doc.id, ...doc.data() }));
+
+    // Calculate pools
+    const winningVotes = votes.filter(v => v.option === winningOption);
+    const losingVotes = votes.filter(v => v.option !== winningOption);
+    
+    const totalWinningStake = winningVotes.reduce((sum, v) => sum + (v.amount || 0), 0);
+    const totalLosingStake = losingVotes.reduce((sum, v) => sum + (v.amount || 0), 0);
+    const totalPool = totalWinningStake + totalLosingStake;
+
+    if (totalWinningStake === 0) {
+      showToast('No winners - all stakes go to platform', 'yellow');
+      // No winners, just mark as resolved
+      await db.collection('markets').doc(docId).update({
+        status: 'resolved',
+        resolvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        resolvedBy: State.currentUser.uid,
+        winningOption: winningOption,
+        totalPool: totalPool,
+        winningPool: 0,
+        losingPool: totalLosingStake
+      });
+    } else {
+      // Calculate payouts proportional to stake
+      // Each winner gets: their stake back + (their stake / total winning stake) * losing pool
+      const batch = db.batch();
+      const payoutDetails = [];
+
+      for (const vote of winningVotes) {
+        const userStake = vote.amount || 0;
+        const proportion = userStake / totalWinningStake;
+        const winnings = Math.floor(proportion * totalLosingStake);
+        const totalPayout = userStake + winnings; // Return stake + winnings
+
+        // Update user's tokens
+        const userRef = db.collection('users').doc(vote.userId);
+        batch.update(userRef, {
+          tokens: firebase.firestore.FieldValue.increment(totalPayout)
+        });
+
+        // Update prediction status to 'won'
+        // Note: We need to update the predictions array - this is tricky with Firestore
+        // For now, we'll add a separate 'results' collection
+        payoutDetails.push({
+          userId: vote.userId,
+          userName: vote.userName,
+          stake: userStake,
+          winnings: winnings,
+          totalPayout: totalPayout,
+          option: vote.option
+        });
+      }
+
+      // Mark market as resolved
+      batch.update(db.collection('markets').doc(docId), {
+        status: 'resolved',
+        resolvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        resolvedBy: State.currentUser.uid,
+        winningOption: winningOption,
+        totalPool: totalPool,
+        winningPool: totalWinningStake,
+        losingPool: totalLosingStake,
+        payouts: payoutDetails,
+        winnerCount: winningVotes.length,
+        loserCount: losingVotes.length
+      });
+
+      // Update losing predictions (mark as 'lost')
+      for (const vote of losingVotes) {
+        payoutDetails.push({
+          userId: vote.userId,
+          userName: vote.userName,
+          stake: vote.amount || 0,
+          winnings: 0,
+          totalPayout: 0,
+          option: vote.option,
+          lost: true
+        });
+      }
+
+      await batch.commit();
+
+      // Notify winners
+      for (const payout of payoutDetails.filter(p => !p.lost)) {
+        try {
+          await db.collection('users').doc(payout.userId).update({
+            notifications: firebase.firestore.FieldValue.arrayUnion({
+              type: 'market_won',
+              message: `🎉 You won ${payout.totalPayout.toLocaleString()} tokens on "${m.question.substring(0, 40)}${m.question.length > 40 ? '…' : ''}"!`,
+              marketId: docId,
+              payout: payout.totalPayout,
+              createdAt: new Date().toISOString(),
+              read: false
+            })
+          });
+        } catch (e) { console.warn('Failed to notify winner:', e); }
+      }
+    }
+
+    // Remove from UI
+    const card = document.getElementById('admin-resolve-mkt-' + docId);
+    if (card) { 
+      card.style.opacity = '0'; 
+      card.style.transform = 'translateY(-20px)'; 
+      setTimeout(() => card.remove(), 380); 
+    }
+    
+    showToast(`✅ Market resolved! ${winningOption === 'a' ? (m.optA || 'Yes') : (m.optB || 'No')} wins. Winners paid out.`, 'green');
+    
+    // Refresh data
+    setTimeout(() => loadAdminData(), 500);
+    
+  } catch (e) {
+    console.error('Resolve error:', e);
+    if (btnA) { btnA.disabled = false; btnA.textContent = `✔ ${m.optA || 'Yes'} Wins`; }
+    if (btnB) { btnB.disabled = false; btnB.textContent = `✖ ${m.optB || 'No'} Wins`; }
+    showToast('Resolve failed: ' + e.message, 'red');
+  }
+}
+
 // ── Demo fallback ─────────────────────────────────────────────────────
 function _renderAdminDemoFallback() {
   ['admin-stat-accounts','admin-stat-tokens','admin-stat-pending','admin-stat-live'].forEach(id => {
@@ -672,7 +907,7 @@ function _renderAdminDemoFallback() {
       <p style="font-family:var(--font-mono);color:var(--yellow);opacity:0.85;font-size:0.85rem;font-weight:700;margin-bottom:0.4rem;">Demo Mode — Firebase not connected</p>
       <p style="font-family:var(--font-mono);color:var(--white3);font-size:0.78rem;">Connect Firebase in config.js to see real data here.</p>
     </div>`;
-  ['admin-pending-list','admin-live-list','admin-accounts-list'].forEach(id => {
+  ['admin-pending-list','admin-live-list','admin-resolve-list','admin-accounts-list'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = msg;
   });

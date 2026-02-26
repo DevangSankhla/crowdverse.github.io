@@ -179,10 +179,10 @@ async function loadUserData() {
     const snap = await db.collection('users').doc(State.currentUser.uid).get();
     if (snap.exists) {
       const data = snap.data();
-      State.userTokens      = data.tokens      || 1000;
+      State.userTokens      = typeof data.tokens === 'number' ? data.tokens : 1000;
       State.userPredictions = data.predictions || [];
     } else {
-      State.userTokens = 1000;
+      State.userTokens = 1000;  // New user gets 1000 tokens
       await saveUserData();
     }
   } catch (e) { console.warn('Firestore load failed:', e); }

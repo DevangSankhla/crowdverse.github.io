@@ -2,6 +2,11 @@
 // markets.js — Render markets list, create market, vote modal
 // ─────────────────────────────────────────────────────────────────────
 
+// Prediction constants
+const MAX_PREDICTION_AMOUNT = 500000;  // Maximum tokens per prediction
+const PREDICTION_FEE = 20;             // Fixed fee per prediction
+const MIN_STAKE = 25;                  // Minimum total (20 fee + 5 stake)
+
 // ── Real-time unsubscribe functions ───────────────────────────────────
 let _marketsUnsubscribe = null;
 let _marketVotesUnsubscribe = {};
@@ -469,14 +474,16 @@ function openVote(marketId, preselectedOpt, e) {
           </div>
 
           <input type="range" id="vote-amount-slider"
-                 min="10" max="${Math.max(10, Math.min(Math.max(State.userTokens, 10), 5000))}" value="${Math.min(50, Math.max(State.userTokens, 10))}"
+                 min="${MIN_STAKE}" max="${Math.min(Math.max(State.userTokens, MIN_STAKE), MAX_PREDICTION_AMOUNT)}" 
+                 value="${Math.min(50, Math.max(State.userTokens, MIN_STAKE))}"
+                 step="5"
                  oninput="updatePotentialWinnings()"
-                 ${State.userTokens < 10 ? 'disabled' : ''}
+                 ${State.userTokens < MIN_STAKE ? 'disabled' : ''}
                  style="width:100%;height:5px;-webkit-appearance:none;appearance:none;
-                        background:var(--white1);border-radius:3px;outline:none;cursor:${State.userTokens < 10 ? 'not-allowed' : 'pointer'};margin-bottom:0.75rem;opacity:${State.userTokens < 10 ? '0.5' : '1'};">
+                        background:var(--white1);border-radius:3px;outline:none;cursor:${State.userTokens < MIN_STAKE ? 'not-allowed' : 'pointer'};margin-bottom:0.75rem;opacity:${State.userTokens < MIN_STAKE ? '0.5' : '1'};">
 
           <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
-            <input type="number" id="vote-amount-input" value="50" min="10" max="${State.userTokens}"
+            <input type="number" id="vote-amount-input" value="50" min="${MIN_STAKE}" max="${Math.min(State.userTokens, MAX_PREDICTION_AMOUNT)}" step="5"
                    oninput="syncSliderWithInput()"
                    style="flex:1;padding:0.7rem;background:var(--white1);border:1px solid var(--border2);
                           border-radius:8px;color:var(--white);font-size:1rem;font-weight:600;
@@ -484,9 +491,12 @@ function openVote(marketId, preselectedOpt, e) {
             <span style="color:var(--white3);font-size:0.78rem;white-space:nowrap;">tokens</span>
           </div>
 
+          <div style="font-size:0.7rem;color:var(--white3);margin-bottom:0.5rem;text-align:center;">
+            <span style="color:var(--yellow);">⚠️ 20 token fee applies</span> · Multiples of 5 only · Max 500,000
+          </div>
           <div style="display:flex;gap:0.35rem;">
-            ${[10, 50, 100, 'Half', 'Max'].map(v => `
-              <button onclick="setAmount(${v === 'Half' ? 'Math.floor(State.userTokens/2)' : v === 'Max' ? 'State.userTokens' : v})"
+            ${[25, 100, 500, 'Half', 'Max'].map(v => `
+              <button onclick="setAmount(${v === 'Half' ? 'Math.floor(Math.min(State.userTokens, MAX_PREDICTION_AMOUNT)/2)' : v === 'Max' ? 'Math.min(State.userTokens, MAX_PREDICTION_AMOUNT)' : v})"
                       style="flex:1;padding:0.4rem 0.2rem;background:var(--white1);border:none;
                              border-radius:6px;color:var(--white3);font-size:0.68rem;cursor:pointer;
                              transition:all 0.15s;font-family:var(--font-mono);"
@@ -749,7 +759,10 @@ function setAmount(amount) {
   const slider = document.getElementById('vote-amount-slider');
   const input  = document.getElementById('vote-amount-input');
   if (!slider || !input) return;
-  const valid = Math.min(Math.max(Number(amount) || 10, 10), State.userTokens);
+  // Round to nearest multiple of 5
+  let valid = Math.round(Number(amount) / 5) * 5;
+  // Ensure at least MIN_STAKE (25) and at most MAX_PREDICTION_AMOUNT or user's tokens
+  valid = Math.min(Math.max(valid, MIN_STAKE), Math.min(State.userTokens, MAX_PREDICTION_AMOUNT));
   slider.value = valid;
   input.value  = valid;
   updatePotentialWinnings();
@@ -760,7 +773,10 @@ function syncSliderWithInput() {
   const slider = document.getElementById('vote-amount-slider');
   const input  = document.getElementById('vote-amount-input');
   if (!slider || !input) return;
-  let val = Math.min(Math.max(parseInt(input.value) || 10, 10), State.userTokens);
+  // Round to nearest multiple of 5
+  let val = Math.round((parseInt(input.value) || MIN_STAKE) / 5) * 5;
+  // Ensure at least MIN_STAKE and at most MAX_PREDICTION_AMOUNT or user's tokens
+  val = Math.min(Math.max(val, MIN_STAKE), Math.min(State.userTokens, MAX_PREDICTION_AMOUNT));
   slider.value = val;
   input.value  = val;
   updatePotentialWinnings();
@@ -772,9 +788,10 @@ function updatePotentialWinnings() {
   const input  = document.getElementById('vote-amount-input');
   if (!slider || !input) return;
   
-  // Clamp amount between 10 and user's tokens
-  let amount = parseInt(slider.value) || 50;
-  amount = Math.max(10, Math.min(amount, State.userTokens));
+  // Clamp amount between MIN_STAKE and user's tokens (max 500,000), round to multiple of 5
+  let amount = parseInt(slider.value) || MIN_STAKE;
+  amount = Math.round(amount / 5) * 5;
+  amount = Math.min(Math.max(amount, MIN_STAKE), Math.min(State.userTokens, MAX_PREDICTION_AMOUNT));
   
   slider.value = amount;
   input.value  = amount;
@@ -784,7 +801,9 @@ function updatePotentialWinnings() {
   const mulEl = document.getElementById('payout-multiplier');
   
   if (State.selectedVoteOption) {
-    const potReturn = Math.floor(amount * currentOdds);
+    // Calculate potential win based on stake amount (total - fee)
+    const stakeAmount = Math.max(0, amount - PREDICTION_FEE);
+    const potReturn = Math.floor(stakeAmount * currentOdds);
     if (returnEl) returnEl.textContent = '+' + potReturn.toLocaleString();
     if (mulEl) mulEl.textContent = currentOdds.toFixed(2) + 'x';
   } else {
@@ -805,8 +824,15 @@ async function confirmPolymarketVote() {
   const slider = document.getElementById('vote-amount-slider');
   if (!slider) { return; }
   
-  const amount = parseInt(slider.value, 10);
-  if (!amount || amount < 10) { showToast('Minimum stake is 10 tokens', 'yellow'); return; }
+  const totalAmount = parseInt(slider.value, 10);
+  if (!totalAmount || totalAmount < MIN_STAKE) { showToast('Minimum total is 25 tokens (20 fee + 5 stake)', 'yellow'); return; }
+  
+  // Validate amount is multiple of 5
+  if (totalAmount % 5 !== 0) { showToast('Amount must be in multiples of 5', 'yellow'); return; }
+  
+  // The actual stake is total minus the fee
+  const stakeAmount = totalAmount - PREDICTION_FEE;
+  if (stakeAmount < 5) { showToast('Minimum stake after fee is 5 tokens', 'yellow'); return; }
 
   // Fetch fresh token balance from Firestore to prevent stale-state bugs
   let freshTokens = State.userTokens;
@@ -821,33 +847,38 @@ async function confirmPolymarketVote() {
     } catch (_) { /* use local value if fetch fails */ }
   }
   
-  if (amount > freshTokens) { showToast('Not enough tokens!', 'red'); return; }
+  if (totalAmount > freshTokens) { showToast(`Not enough tokens! Need ${totalAmount} (${stakeAmount} + ${PREDICTION_FEE} fee)`, 'red'); return; }
 
   const m = findMarketById(String(State.activeMarketId));
   if (!m) { showToast('Market not found', 'red'); return; }
 
-  // Calculate odds and potential win
+  // Calculate odds and potential win (based on stake amount, not total)
   const pctA   = m.pctA || 50;
   const pctB   = 100 - pctA;
   const oddsA  = pctA > 0 ? (100 / pctA) : 2;
   const oddsB  = pctB > 0 ? (100 / pctB) : 2;
   const liveOdds = State.selectedVoteOption === 'a' ? oddsA : oddsB;
-  const potentialWin = Math.floor(amount * liveOdds);
+  const potentialWin = Math.floor(stakeAmount * liveOdds);
   const optLabel = State.selectedVoteOption === 'a' ? (m.optA || 'Yes') : (m.optB || 'No');
 
   // ── Attention gate: user must confirm they've read the context ──────
-  const confirmed = await showAttentionOverlay(optLabel, amount, potentialWin);
+  const confirmed = await showAttentionOverlay(optLabel, totalAmount, potentialWin);
   if (!confirmed) return; // User bailed
   // ── End attention gate ─────────────────────────────────────────────
   
+  // Prevent double submission - check flag immediately before any state changes
+  if (_isSubmittingPrediction) { return; }
   _isSubmittingPrediction = true;
   
   // Build prediction entry - ensure no undefined values
+  // Note: we record stakeAmount (total - fee), not totalAmount
   const predictionEntry = {
     marketId:    String(State.activeMarketId),
     question:    m.question || 'Unknown',
     option:      optLabel,
-    amount:      amount,
+    amount:      stakeAmount,  // Actual stake after fee
+    fee:         PREDICTION_FEE,  // Fee charged
+    totalDeducted: totalAmount,  // Total deducted from user
     potentialWin: potentialWin,
     odds:        Math.round(liveOdds * 100) / 100, // Round to 2 decimal places
     status:      'pending',
@@ -855,7 +886,8 @@ async function confirmPolymarketVote() {
   };
 
   // Optimistic local update (ensure never goes below 0)
-  State.userTokens = Math.max(0, State.userTokens - amount);
+  // Deduct total amount (stake + fee)
+  State.userTokens = Math.max(0, State.userTokens - totalAmount);
   State.userPredictions.push(predictionEntry);
 
   // Disable confirm button immediately to prevent double-submit
@@ -876,46 +908,47 @@ async function confirmPolymarketVote() {
       
       // Verify user has sufficient tokens before batch
       const userSnap = await userRef.get();
-      const userData = userSnap.exists ? userSnap.data() : { tokens: 1000 };
-      const currentTokens = userData.tokens || 1000;
+      const userData = userSnap.exists ? userSnap.data() : { tokens: 0 };
+      const currentTokens = typeof userData.tokens === 'number' ? userData.tokens : 0;
       
-      if (currentTokens < amount) {
-        State.userTokens += amount;
+      if (currentTokens < totalAmount) {
+        State.userTokens += totalAmount;
         State.userPredictions.pop();
         if (btn) { btn.disabled = false; btn.textContent = 'Place Prediction'; }
         _isSubmittingPrediction = false;
-        showToast('Not enough tokens!', 'red');
+        showToast(`Not enough tokens! Need ${totalAmount} (${stakeAmount} stake + ${PREDICTION_FEE} fee)`, 'red');
         return;
       }
       
       // Execute batch write for atomicity
       const batch = db.batch();
       
-      // 1. Record the vote
+      // 1. Record the vote (stake amount only, fee goes to platform)
       batch.set(voteRef, {
         userId:    State.currentUser.uid,
         userName:  State.currentUser.displayName || State.currentUser.email?.split('@')[0] || 'User',
         option:    State.selectedVoteOption,
-        amount:    amount,
+        amount:    stakeAmount,  // Only stake goes to market pool
+        fee:       PREDICTION_FEE,  // Fee recorded
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       
-      // 2. Deduct user tokens and add prediction
+      // 2. Deduct user tokens (total = stake + fee) and add prediction
       batch.update(userRef, {
-        tokens:      firebase.firestore.FieldValue.increment(-amount),
+        tokens:      firebase.firestore.FieldValue.increment(-totalAmount),
         predictions: firebase.firestore.FieldValue.arrayUnion(predictionEntry)
       });
       
-      // 3. Increment market token pool
+      // 3. Increment market token pool (only stake amount, not fee)
       batch.update(mktRef, {
-        tokens: firebase.firestore.FieldValue.increment(amount)
+        tokens: firebase.firestore.FieldValue.increment(stakeAmount)
       });
       
       await batch.commit();
       
     } catch (e) {
       // Rollback local state on failure
-      State.userTokens += amount;
+      State.userTokens += totalAmount;
       State.userPredictions.pop();
       console.error('Vote commit failed:', e);
       if (btn) { btn.disabled = false; btn.textContent = 'Place Prediction'; }
@@ -928,7 +961,7 @@ async function confirmPolymarketVote() {
 
   updateTokenDisplay();
   closePolymarketVoteModal();
-  showToast(`🎯 ${amount} tokens on "${optLabel}" — potential +${potentialWin} if correct!`, 'green');
+  showToast(`🎯 ${stakeAmount} tokens staked (+${PREDICTION_FEE} fee) — potential +${potentialWin} if correct!`, 'green');
 
   // Refresh markets to show "Predicted" badge
   renderMarkets(_currentMarketFilter);

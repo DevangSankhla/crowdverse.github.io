@@ -2,18 +2,19 @@
 // pages.js — Builds HTML content for each page section
 // ─────────────────────────────────────────────────────────────────────
 
+// Market submission cost in tokens
+const MARKET_SUBMISSION_COST = 20;
+
 // ── HOME PAGE ────────────────────────────────────────────────────────
 function buildHomePage() {
   document.getElementById('page-home').innerHTML = `
-    <!-- Hero -->
+    <!-- Hero - Mobile Optimized -->
     <div class="hero">
       <div class="hero-badge">🇮🇳 India's First Prediction Market</div>
       <img src="assets/logo.jpg" alt="CrowdVerse" class="hero-logo">
       <h1>What Does The<br><span class="accent">Crowd Think?</span></h1>
-      <p>
-        Make educated guesses on real-world events — from sports to economy to
-        entertainment. Earn tokens, climb leaderboards, and see how your predictions
-        compare to thousands of others.
+      <p class="hero-description">
+        Predict on real-world events. Earn tokens. Climb the leaderboard.
       </p>
       <div class="hero-actions" id="hero-cta-area">
         <button class="btn btn-primary btn-lg" onclick="openAuth()">
@@ -25,15 +26,15 @@ function buildHomePage() {
       </div>
     </div>
 
-    <!-- Stats Strip -->
+    <!-- Mobile-Friendly Stats - Horizontal Scroll on Mobile -->
     <div class="stats-strip">
       <div class="stat-item">
         <span class="stat-num">1,000</span>
-        <span class="stat-label">Free Signup Tokens</span>
+        <span class="stat-label">Free Tokens</span>
       </div>
       <div class="stat-item">
         <span class="stat-num">200</span>
-        <span class="stat-label">Weekly Token Bonus</span>
+        <span class="stat-label">Weekly Bonus</span>
       </div>
       <div class="stat-item">
         <span class="stat-num">100%</span>
@@ -41,91 +42,76 @@ function buildHomePage() {
       </div>
       <div class="stat-item">
         <span class="stat-num">18+</span>
-        <span class="stat-label">Age Verified Platform</span>
+        <span class="stat-label">Legal & Safe</span>
       </div>
     </div>
 
-    <!-- Legal Banner -->
-    <div style="max-width:1100px; margin:1.5rem auto; padding:0 2rem;">
-      <div class="legal-banner">
-        <div class="icon">⚖️</div>
-        <p>
-          <strong>Fully Legal & Compliant:</strong> CrowdVerse operates exclusively with virtual
-          game tokens — no real money is ever deposited, wagered, or withdrawn. We comply fully
-          with Indian law by offering a skill-based opinion and prediction platform. This is
-          <strong>NOT betting or gambling.</strong> Tokens have no monetary value and cannot be
-          converted to cash.
-        </p>
-      </div>
-    </div>
-
-    <!-- How It Works -->
-    <div class="section">
-      <div class="section-label">How It Works</div>
-      <h2>Predict. Earn. Repeat.</h2>
-      <div class="steps-grid">
-        <div class="step-card">
-          <div class="step-num">01</div>
-          <div class="step-icon">🎟️</div>
-          <h3>Sign Up & Get Tokens</h3>
-          <p>Create your free account and instantly receive 1,000 welcome tokens. No credit
-             card, no deposit — ever.</p>
-        </div>
-        <div class="step-card">
-          <div class="step-num">02</div>
-          <div class="step-icon">🔮</div>
-          <h3>Make Predictions</h3>
-          <p>Browse live markets across sports, economy, entertainment & more. Stake tokens
-             on outcomes you believe in.</p>
-        </div>
-        <div class="step-card">
-          <div class="step-num">03</div>
-          <div class="step-icon">📈</div>
-          <h3>Watch Odds Shift</h3>
-          <p>As more users predict, odds shift in real-time — just like real prediction
-             markets. The crowd decides.</p>
-        </div>
-        <div class="step-card">
-          <div class="step-num">04</div>
-          <div class="step-icon">🏆</div>
-          <h3>Win & Redeem</h3>
-          <p>Correct predictions multiply your tokens. Redeem rewards, climb the
-             leaderboard, and flex your crowd wisdom.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Live Markets Preview -->
+    <!-- Live Markets Preview - Moved Up for Better Mobile UX -->
     <div class="section" style="padding-top:0">
-      <div class="section-label">Live Markets</div>
-      <h2>What's The Crowd Saying?</h2>
+      <div class="section-header-mobile">
+        <div class="section-label">Live Markets</div>
+        <h2>What's The Crowd Saying?</h2>
+      </div>
       <div class="market-cards" id="home-markets-preview">
         <div style="text-align:center;padding:3rem 2rem;color:var(--white3);
                     font-family:var(--font-mono);font-size:0.85rem;grid-column:1/-1;">
           Loading markets...
         </div>
       </div>
-      <div style="text-align:center;margin-top:2rem;">
+      <div style="text-align:center;margin-top:1.5rem;">
         <button class="btn btn-ghost btn-lg" onclick="showPage('markets')">View All Markets →</button>
       </div>
     </div>
 
-    <!-- Weekly Bonus -->
-    <div class="section" style="padding-top:0">
-      <div class="section-label">Weekly Bonus</div>
-      <h2>Free Tokens, Every Week</h2>
-      <p style="color:var(--white2);margin-bottom:1.5rem;max-width:620px;line-height:1.7;">
-        During our launch phase, every user receives
-        <strong style="color:var(--green)">200 free tokens every week</strong> — no payment needed.
-      </p>
-      <div class="legal-banner">
-        <div class="icon">🔒</div>
-        <p>
-          When paid subscriptions launch, they will be priced for access to prediction tools —
-          <strong>NOT</strong> for purchasing outcomes. All tiers will have strict limits in
-          accordance with Indian IT and gaming regulations. Full online KYC verification will
-          be required at that stage.
+    <!-- Simplified How It Works for Mobile -->
+    <div class="section">
+      <div class="section-label">How It Works</div>
+      <h2>Predict. Earn. Repeat.</h2>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-header">
+            <div class="step-icon">🎟️</div>
+            <h3>Get Tokens</h3>
+          </div>
+          <p>Sign up free, get 1,000 tokens instantly. No deposit needed.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-header">
+            <div class="step-icon">🔮</div>
+            <h3>Predict</h3>
+          </div>
+          <p>Stake tokens on sports, economy, entertainment & more.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-header">
+            <div class="step-icon">🏆</div>
+            <h3>Win</h3>
+          </div>
+          <p>Correct predictions multiply your tokens. Climb the leaderboard.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Compact Legal Notice -->
+    <div style="max-width:1100px; margin:1rem auto; padding:0 1.25rem;">
+      <div class="legal-banner" style="padding:1rem;">
+        <div class="icon" style="font-size:1.25rem;">⚖️</div>
+        <p style="font-size:0.8rem;line-height:1.5;">
+          <strong>Legal & Compliant:</strong> Virtual tokens only — no real money. 
+          This is <strong>NOT betting or gambling.</strong> 18+ only.
         </p>
+      </div>
+    </div>
+
+    <!-- Weekly Bonus - Compact -->
+    <div class="section" style="padding-top:0;padding-bottom:2rem;">
+      <div style="background:var(--off-black);border:1px solid var(--border);border-radius:var(--radius-md);padding:1.25rem;text-align:center;">
+        <div style="font-size:1.75rem;margin-bottom:0.5rem;">🎁</div>
+        <h3 style="font-size:1rem;margin-bottom:0.5rem;">Weekly Bonus</h3>
+        <p style="color:var(--white2);font-size:0.85rem;margin-bottom:1rem;">
+          Get <strong style="color:var(--green)">200 free tokens</strong> every week
+        </p>
+        <button class="btn btn-primary" onclick="showPage('markets')">Start Predicting →</button>
       </div>
     </div>
 
@@ -158,74 +144,110 @@ function updateHeroCta() {
   }
 }
 
-// ── COMMUNITY PAGE — Submit polls + community submissions ─────────────
+// ── COMMUNITY PAGE — Submit a market only ─────────────────────────────
 function buildCommunityPage() {
   document.getElementById('page-community').innerHTML = `
     <div class="page-header">
-      <div class="section-label" style="margin-bottom:0.5rem">Community</div>
-      <h1>Community Polls</h1>
-      <p>Submit a prediction question for the crowd to vote on. All polls are reviewed before going live.</p>
+      <div class="section-label" style="margin-bottom:0.5rem">Submit</div>
+      <h1>Submit a Prediction Market</h1>
+      <p>Create your own prediction question for the crowd to vote on.</p>
     </div>
 
-    <!-- Submit a poll CTA card -->
-    <div style="max-width:1100px;margin:0 auto;padding:0 2rem 1.5rem;">
-      <div style="background:rgba(127,255,127,0.03);border:1px solid rgba(127,255,127,0.12);
-                  border-radius:var(--radius-lg);padding:1.5rem;
-                  display:flex;align-items:center;justify-content:space-between;
-                  gap:1.5rem;flex-wrap:wrap;">
-        <div>
-          <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.35rem;">
-            💡 Got a prediction idea?
-          </h3>
-          <p style="color:var(--white2);font-size:0.83rem;line-height:1.55;max-width:540px;">
-            Submit a poll for just <strong style="color:var(--green);opacity:0.9;">10 tokens</strong>.
-            If approved by our team, it goes live for everyone to predict on.
-            Note: polls that don't align with our guidelines won't be approved and no tokens are refunded — so keep it relevant!
-          </p>
+    <!-- Submission Form Container -->
+    <div style="max-width:600px;margin:0 auto;padding:0 2rem 3rem;">
+      ${!State.currentUser ? `
+        <!-- Not logged in -->
+        <div style="background:var(--off-black);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2.5rem;text-align:center;">
+          <div style="font-size:3rem;margin-bottom:1rem;">🔒</div>
+          <h3 style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;margin-bottom:0.5rem;">Log in to Submit</h3>
+          <p style="color:var(--white2);font-size:0.85rem;margin-bottom:1.5rem;">You need an account to submit prediction markets.</p>
+          <button class="btn btn-primary btn-lg" onclick="openAuth()">Log In / Sign Up</button>
         </div>
-        ${State.currentUser 
-          ? `<button class="btn btn-primary" onclick="openCreateMarketModal()" style="white-space:nowrap;flex-shrink:0;">Submit a Poll →</button>`
-          : `<button class="btn btn-primary" onclick="openAuth()" style="white-space:nowrap;flex-shrink:0;">Log In to Submit</button>`
-        }
-      </div>
-    </div>
+      ` : State.userTokens < MARKET_SUBMISSION_COST ? `
+        <!-- Not enough tokens -->
+        <div style="background:var(--off-black);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2.5rem;text-align:center;">
+          <div style="font-size:3rem;margin-bottom:1rem;">🎟️</div>
+          <h3 style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;margin-bottom:0.5rem;">Not Enough Tokens</h3>
+          <p style="color:var(--white2);font-size:0.85rem;margin-bottom:1rem;">You need <strong>${MARKET_SUBMISSION_COST} tokens</strong> to submit a market.</p>
+          <p style="font-family:var(--font-mono);font-size:0.75rem;color:var(--white3);">Current balance: ${State.userTokens.toLocaleString()} tokens</p>
+        </div>
+      ` : `
+        <!-- Submission Form -->
+        <div style="background:var(--off-black);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;">
+          <div style="margin-bottom:1.5rem;">
+            <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.35rem;">💡 Submit Your Prediction Question</h3>
+            <p style="color:var(--white2);font-size:0.83rem;line-height:1.55;">
+              Cost: <strong style="color:var(--green);">${MARKET_SUBMISSION_COST} tokens</strong>. 
+              All submissions are reviewed before going live.
+            </p>
+          </div>
 
-    <!-- Stats -->
-    <div style="max-width:1100px;margin:0 auto;padding:0 2rem 1.5rem;">
-      <div class="stats-strip" style="margin:0;">
-        <div class="stat-item">
-          <span class="stat-num" id="community-active-polls">—</span>
-          <span class="stat-label">Live Community Polls</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-num" id="community-total-volume">—</span>
-          <span class="stat-label">Total Volume</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-num" id="community-token-count">${State.userTokens || '—'}</span>
-          <span class="stat-label">Your Tokens</span>
-        </div>
-      </div>
-    </div>
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label class="form-label">Question *</label>
+            <input class="form-input" id="mkt-question" placeholder="e.g., Will India win the World Cup 2026?">
+          </div>
 
-    <!-- User's pending submissions (shown when logged in and have pending markets) -->
-    <div style="max-width:1100px;margin:0 auto;padding:0 2rem 1.5rem;" id="pending-submissions-wrap">
-      <!-- populated by updateCommunityPage() -->
-    </div>
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label class="form-label">Description (optional)</label>
+            <textarea class="form-input" id="mkt-description" rows="2" placeholder="Add context for predictors…"></textarea>
+          </div>
 
-    <!-- Community polls grid -->
-    <div style="max-width:1100px;margin:0 auto;padding:0 2rem 3rem;">
-      <div class="section-label" style="margin-bottom:0.75rem;">● Live Community Polls</div>
-      <div class="market-cards" id="community-markets-list">
-        <div style="text-align:center;padding:3rem 2rem;color:var(--white3);
-                    font-family:var(--font-mono);font-size:0.85rem;grid-column:1/-1;">
-          Loading polls...
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label class="form-label">Category</label>
+            <select class="form-select" id="mkt-category" style="width:100%;">
+              <option value="sports">🏏 Sports</option>
+              <option value="economy">📊 Economy</option>
+              <option value="entertainment">🎬 Entertainment</option>
+              <option value="technology">💻 Technology</option>
+              <option value="climate">🌿 Climate</option>
+              <option value="crypto">₿ Crypto</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label class="form-label">End Date *</label>
+            <input class="form-input" type="date" id="mkt-enddate">
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.5rem;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Option A (Yes side)</label>
+              <input class="form-input" id="mkt-option-a" value="Yes" placeholder="Yes">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Option B (No side)</label>
+              <input class="form-input" id="mkt-option-b" value="No" placeholder="No">
+            </div>
+          </div>
+
+          <div style="background:var(--dark);padding:0.75rem 1rem;border-radius:8px;margin-bottom:1rem;
+                      font-size:0.8rem;color:var(--white2);">
+            Your balance: <strong style="color:var(--green);">${State.userTokens.toLocaleString()}</strong> tokens
+            &nbsp;·&nbsp; Fee: <strong>${MARKET_SUBMISSION_COST} tokens</strong>
+          </div>
+
+          <button class="btn btn-primary w-full" onclick="submitCreateMarketDirect()">
+            Submit Market (${MARKET_SUBMISSION_COST} tokens)
+          </button>
+
+          <div id="submit-error" style="display:none;margin-top:1rem;padding:0.75rem;background:rgba(224,80,80,0.1);
+                                       border:1px solid rgba(224,80,80,0.25);border-radius:8px;
+                                       color:var(--red);font-size:0.8rem;"></div>
         </div>
-      </div>
+      `}
     </div>
 
     ${buildFooter()}
   `;
+  
+  // Set default date if form is shown
+  if (State.currentUser && State.userTokens >= MARKET_SUBMISSION_COST) {
+    const future = new Date();
+    future.setMonth(future.getMonth() + 1);
+    const defaultDate = future.toISOString().split('T')[0];
+    const dateInput = document.getElementById('mkt-enddate');
+    if (dateInput) dateInput.value = defaultDate;
+  }
 }
 
 // ── MARKETS PAGE — All live markets ──────────────────────────────────
@@ -330,8 +352,8 @@ function applyMarketSort() {
 function openCreateMarketModal() {
   if (!State.currentUser) { openAuth(); return; }
 
-  if (State.userTokens < 10) {
-    showToast('You need at least 10 tokens to submit a poll', 'red');
+  if (State.userTokens < MARKET_SUBMISSION_COST) {
+    showToast(`You need at least ${MARKET_SUBMISSION_COST} tokens to submit a poll`, 'red');
     return;
   }
 
@@ -351,7 +373,7 @@ function openCreateMarketModal() {
       <h2 style="margin-bottom:0.4rem;">Submit a Poll</h2>
       <p style="color:var(--white2);margin-bottom:1.5rem;font-size:0.83rem;line-height:1.5;">
         Set up your prediction question for the community. Costs
-        <strong style="color:var(--green);opacity:0.9;">10 tokens</strong>.
+        <strong style="color:var(--green);opacity:0.9;">20 tokens</strong>.
         Polls are reviewed within 24–48 hours. Note: tokens are <strong>not refunded</strong> if rejected.
       </p>
 
@@ -392,11 +414,11 @@ function openCreateMarketModal() {
       <div style="background:var(--white1);padding:0.75rem 1rem;border-radius:8px;margin-bottom:1rem;
                   font-size:0.8rem;color:var(--white2);">
         Your balance: <strong style="color:var(--green);opacity:0.9;">${State.userTokens.toLocaleString()}</strong> tokens
-        &nbsp;·&nbsp; Submission fee: <strong>10 tokens</strong>
+        &nbsp;·&nbsp; Submission fee: <strong>20 tokens</strong>
       </div>
 
       <button class="btn btn-primary w-full" onclick="submitCreateMarket()">
-        Submit Poll (10 tokens)
+        Submit Poll (20 tokens)
       </button>
     </div>
   `;
@@ -434,7 +456,7 @@ async function submitCreateMarket() {
   today.setHours(0, 0, 0, 0);
   if (selectedDate < today) { showToast('End date must be in the future', 'yellow'); return; }
   
-  if (State.userTokens < 10)             { showToast('You need at least 10 tokens to submit', 'red'); return; }
+  if (State.userTokens < MARKET_SUBMISSION_COST) { showToast(`You need at least ${MARKET_SUBMISSION_COST} tokens to submit`, 'red'); return; }
 
   const catEmojis = {
     sports: '🏏 Sports', economy: '📊 Economy',
@@ -480,9 +502,9 @@ async function submitCreateMarket() {
         }
       } catch (_) { /* use local value if fetch fails */ }
 
-      if (latestTokens < 10) {
-        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit Poll (10 tokens)'; }
-        showToast('Not enough tokens to submit a poll', 'red');
+      if (latestTokens < MARKET_SUBMISSION_COST) {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = `Submit Poll (${MARKET_SUBMISSION_COST} tokens)`; }
+        showToast(`Not enough tokens to submit a poll`, 'red');
         return;
       }
 
@@ -498,22 +520,22 @@ async function submitCreateMarket() {
 
       // set+merge works even if user doc doesn't exist yet (unlike update)
       batch.set(userRef, {
-        tokens: firebase.firestore.FieldValue.increment(-10)
+        tokens: firebase.firestore.FieldValue.increment(-MARKET_SUBMISSION_COST)
       }, { merge: true });
 
       await batch.commit();
 
       // Only deduct locally AFTER confirmed Firestore commit
-      State.userTokens = latestTokens - 10;
+      State.userTokens = latestTokens - MARKET_SUBMISSION_COST;
       updateTokenDisplay();
     } catch (e) {
-      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit Poll (10 tokens)'; }
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = `Submit Poll (${MARKET_SUBMISSION_COST} tokens)`; }
       showToast('Failed to submit: ' + e.message, 'red');
       return;
     }
   } else {
     // Demo mode — just deduct locally (ensure never goes below 0)
-    State.userTokens = Math.max(0, State.userTokens - 10);
+    State.userTokens = Math.max(0, State.userTokens - MARKET_SUBMISSION_COST);
     updateTokenDisplay();
   }
 
@@ -521,6 +543,120 @@ async function submitCreateMarket() {
   closeCreateMarketModal();
   if (typeof updateCommunityPage === 'function') updateCommunityPage();
   showToast('Poll submitted for review! ✅ Our team will review within 24–48h.', 'green');
+}
+
+// ── Direct market submission from community page (no modal) ───────────
+async function submitCreateMarketDirect() {
+  const question    = document.getElementById('mkt-question')?.value.trim();
+  const category    = document.getElementById('mkt-category')?.value;
+  const optA        = document.getElementById('mkt-option-a')?.value.trim() || 'Yes';
+  const optB        = document.getElementById('mkt-option-b')?.value.trim() || 'No';
+  const endDate     = document.getElementById('mkt-enddate')?.value;
+  const description = document.getElementById('mkt-description')?.value.trim() || '';
+  const errorEl     = document.getElementById('submit-error');
+
+  // Validation
+  if (!question || question.length < 10) {
+    if (errorEl) { errorEl.textContent = 'Question too short — be more descriptive'; errorEl.style.display = ''; }
+    return;
+  }
+  if (!endDate) {
+    if (errorEl) { errorEl.textContent = 'Please select an end date'; errorEl.style.display = ''; }
+    return;
+  }
+  
+  // Validate end date is in the future
+  const selectedDate = new Date(endDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (selectedDate < today) {
+    if (errorEl) { errorEl.textContent = 'End date must be in the future'; errorEl.style.display = ''; }
+    return;
+  }
+  
+  if (State.userTokens < MARKET_SUBMISSION_COST) {
+    if (errorEl) { errorEl.textContent = `You need at least ${MARKET_SUBMISSION_COST} tokens to submit`; errorEl.style.display = ''; }
+    return;
+  }
+
+  const catEmojis = {
+    sports: '🏏 Sports', economy: '📊 Economy',
+    entertainment: '🎬 Entertainment', technology: '💻 Technology',
+    climate: '🌿 Climate', crypto: '₿ Crypto'
+  };
+
+  const displayName = State.currentUser?.displayName
+    || State.currentUser?.email?.split('@')[0]
+    || 'User';
+
+  const newMarket = {
+    id:             Date.now(),
+    question, description,
+    cat:            catEmojis[category] || '🔮 Other',
+    optA, optB,
+    pctA:           50,
+    tokens:         MARKET_SUBMISSION_COST,
+    ends:           new Date(endDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }),
+    status:         'pending',
+    createdBy:      State.currentUser?.uid || 'demo',
+    createdByUid:   State.currentUser?.uid || 'demo',
+    createdByEmail: State.currentUser?.email || '',
+    createdByName:  displayName,
+    createdAt:      new Date().toISOString()
+  };
+
+  if (!demoMode && db) {
+    try {
+      const userRef  = db.collection('users').doc(State.currentUser.uid);
+      const marketRef = db.collection('markets').doc();
+
+      // Re-fetch latest token balance
+      let latestTokens = State.userTokens;
+      try {
+        const snap = await userRef.get();
+        if (snap.exists && typeof snap.data().tokens === 'number') {
+          latestTokens = snap.data().tokens;
+          State.userTokens = latestTokens;
+          updateTokenDisplay();
+        }
+      } catch (_) { }
+
+      if (latestTokens < MARKET_SUBMISSION_COST) {
+        if (errorEl) { errorEl.textContent = `Not enough tokens to submit`; errorEl.style.display = ''; }
+        return;
+      }
+
+      // Batch: save market + deduct tokens
+      const batch = db.batch();
+
+      batch.set(marketRef, {
+        ...newMarket,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      newMarket.firestoreId = marketRef.id;
+      newMarket.id          = marketRef.id;
+
+      batch.set(userRef, {
+        tokens: firebase.firestore.FieldValue.increment(-MARKET_SUBMISSION_COST)
+      }, { merge: true });
+
+      await batch.commit();
+
+      State.userTokens = latestTokens - MARKET_SUBMISSION_COST;
+      updateTokenDisplay();
+    } catch (e) {
+      if (errorEl) { errorEl.textContent = 'Failed to submit: ' + e.message; errorEl.style.display = ''; }
+      return;
+    }
+  } else {
+    // Demo mode
+    State.userTokens = Math.max(0, State.userTokens - MARKET_SUBMISSION_COST);
+    updateTokenDisplay();
+  }
+
+  State.userCreatedMarkets.push(newMarket);
+  showToast('Market submitted for review! ✅', 'green');
+  buildCommunityPage(); // Rebuild to show success state
 }
 
 // ── REWARDS PAGE ─────────────────────────────────────────────────────
@@ -772,7 +908,10 @@ async function renderProfile() {
       const snap = await db.collection('users').doc(State.currentUser.uid).get();
       if (snap.exists) {
         const data = snap.data();
-        State.userTokens = data.tokens || State.userTokens;
+        // Only update if tokens is actually a number (allows 0)
+        if (typeof data.tokens === 'number') {
+          State.userTokens = data.tokens;
+        }
         State.userPredictions = data.predictions || State.userPredictions;
         updateTokenDisplay();
       }
@@ -890,94 +1029,20 @@ function updateHomeMarketsPreview() {
 
 // ── Update community page — community-submitted markets ───────────────
 function updateCommunityPage() {
-  // Stats
-  const communityMarkets = State.firestoreMarkets.filter(m => m.createdBy);
-  const totalVolume      = communityMarkets.reduce((s, m) => s + (m.totalTokens || m.tokens || 0), 0);
-
-  const activePollsEl = document.getElementById('community-active-polls');
-  const totalVolumeEl = document.getElementById('community-total-volume');
-  const tokenCountEl  = document.getElementById('community-token-count');
-
-  if (activePollsEl) activePollsEl.textContent = communityMarkets.length;
-  if (totalVolumeEl) totalVolumeEl.textContent = totalVolume.toLocaleString();
-  if (tokenCountEl)  tokenCountEl.textContent  = State.userTokens.toLocaleString();
-
-  // Pending submissions (current user's)
-  const pendingWrap = document.getElementById('pending-submissions-wrap');
-  if (pendingWrap) {
-    const myPending = State.userCreatedMarkets.filter(m => m.status === 'pending');
-    if (myPending.length > 0 && State.currentUser) {
-      pendingWrap.innerHTML = `
-        <div class="section-label" style="margin-bottom:0.75rem;">⏳ Your Polls Under Review</div>
-        ${myPending.map(m => `
-          <div style="background:rgba(212,178,0,0.04);border:1px solid rgba(212,178,0,0.18);
-                      border-left:3px solid rgba(212,178,0,0.5);
-                      border-radius:var(--radius-md);padding:1rem;margin-bottom:0.6rem;">
-            <div style="font-weight:600;color:var(--white);margin-bottom:0.25rem;font-size:0.9rem;">${escHtml(m.question)}</div>
-            <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--white3);">
-              ⏳ Under review · usually 24–48 hours · ${escHtml(m.cat || '')}
-            </div>
-          </div>
-        `).join('')}
-      `;
-    } else {
-      pendingWrap.innerHTML = '';
-    }
-  }
-
-  // Community polls grid
-  const container = document.getElementById('community-markets-list');
-  if (!container) return;
-
-  if (communityMarkets.length === 0) {
-    container.innerHTML = `
-      <div style="text-align:center;padding:3rem 2rem;color:var(--white3);
-                  font-family:var(--font-mono);font-size:0.85rem;grid-column:1/-1;">
-        ${demoMode
-          ? 'Demo mode: Community polls will appear here once submitted & approved'
-          : 'No community polls live yet. Be the first to submit one!'}
-      </div>`;
+  // The community page is now simpler - just rebuild if needed
+  // Check if we're on the community page and need to refresh the token display
+  const tokenDisplay = document.querySelector('#page-community .token-display');
+  if (tokenDisplay) {
+    // Page has old structure, rebuild it
+    buildCommunityPage();
     return;
   }
-
-  container.innerHTML = communityMarkets.map(m => {
-    const pctA        = m.pctA || 50;
-    const pctB        = 100 - pctA;
-    const totalTokens = m.totalTokens || m.tokens || 0;
-    const marketId    = String(m.firestoreId || m.id);
-    const daysLeft    = getDaysRemaining(m.ends);
-    const hasVoted    = State.userPredictions.some(p => String(p.marketId) === marketId);
-    return `
-      <div class="market-card" data-market-id="${marketId}"
-           onclick="if(event.target.closest('.share-btn')) return; if(!State.currentUser){openAuth();return;} if('${daysLeft}'==='Ended'){showToast('This market has ended','red');return;} openVote('${marketId}',null,event)">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
-          <div style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap;">
-            <div class="market-cat">${escHtml(m.cat)}</div>
-            ${hasVoted ? `<span style="font-family:var(--font-mono);font-size:0.6rem;color:var(--white3);
-                                  background:var(--white1);border:1px solid var(--border2);
-                                  padding:0.1rem 0.35rem;border-radius:3px;">✓ Predicted</span>` : ''}
-          </div>
-          <button class="share-btn"
-                  onclick="event.stopPropagation();shareMarket('${marketId}','${escHtml(m.question).replace(/'/g, "\\'")}','community')"
-                  style="background:var(--white1);border:none;border-radius:50%;width:30px;height:30px;
-                         cursor:pointer;display:flex;align-items:center;justify-content:center;
-                         transition:all 0.2s;font-size:0.8rem;color:var(--white3);"
-                  title="Share"
-                  onmouseover="this.style.background='rgba(127,255,127,0.12)';this.style.color='var(--green)'"
-                  onmouseout="this.style.background='var(--white1)';this.style.color='var(--white3)'">🔗</button>
-        </div>
-        <h3>${escHtml(m.question)}</h3>
-        <div class="odds-bar"><div class="odds-fill" style="width:${pctA}%;opacity:0.8;"></div></div>
-        <div class="odds-labels">
-          <span>${escHtml(m.optA)} ${pctA}%</span>
-          <span>${escHtml(m.optB)} ${pctB}%</span>
-        </div>
-        <div class="market-meta">
-          <span style="${daysLeft?.includes('⚡') ? 'color:var(--yellow);opacity:0.8;' : ''}">${daysLeft || ('Ends: ' + m.ends)}</span>
-          <span class="vol">${totalTokens.toLocaleString()} pooled</span>
-        </div>
-      </div>`;
-  }).join('');
+  
+  // Otherwise, just update the token count in the form if it exists
+  const balanceEl = document.querySelector('#page-community strong[style*="color:var(--green)"]');
+  if (balanceEl && State.currentUser) {
+    balanceEl.textContent = State.userTokens.toLocaleString();
+  }
 }
 
 // ── ADMIN PAGE (shell) ────────────────────────────────────────────────

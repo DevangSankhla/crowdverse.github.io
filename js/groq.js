@@ -110,10 +110,14 @@ async function loadAndInjectContext(marketId, question, category) {
 
 // ── Attention confirmation overlay ────────────────────────────────────
 // Returns a Promise<boolean> — true = confirmed, false = user cancelled
-function showAttentionOverlay(optLabel, amount, potentialWin) {
+function showAttentionOverlay(optLabel, totalAmount, potentialWin) {
   return new Promise(resolve => {
     const existing = document.getElementById('attention-overlay');
     if (existing) existing.remove();
+    
+    // Calculate breakdown: total = stake + fee
+    const FEE = 20;
+    const stakeAmount = totalAmount - FEE;
 
     const overlay = document.createElement('div');
     overlay.id = 'attention-overlay';
@@ -139,17 +143,25 @@ function showAttentionOverlay(optLabel, amount, potentialWin) {
         </div>
         <div style="font-size:0.8rem;color:var(--white3);">
           You are about to stake
-          <strong style="color:var(--yellow);">${amount} tokens</strong>
+          <strong style="color:var(--yellow);">${stakeAmount} tokens</strong>
           on <strong style="color:var(--white);">"${escHtml(optLabel)}"</strong>
+          <br><small style="color:var(--white3);opacity:0.7;">(${FEE} token platform fee included)</small>
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:1.25rem;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem;margin-bottom:1.25rem;">
         <div style="background:var(--dark);border:1px solid var(--border2);border-radius:8px;
                     padding:0.75rem;text-align:center;">
           <div style="font-size:0.65rem;color:var(--white3);text-transform:uppercase;
-                      letter-spacing:0.06em;margin-bottom:0.25rem;">Staking</div>
-          <div style="font-size:1.25rem;font-weight:800;color:var(--yellow);">${amount}</div>
+                      letter-spacing:0.06em;margin-bottom:0.25rem;">Your Stake</div>
+          <div style="font-size:1.25rem;font-weight:800;color:var(--yellow);">${stakeAmount}</div>
+          <div style="font-size:0.65rem;color:var(--white3);">tokens</div>
+        </div>
+        <div style="background:var(--dark);border:1px solid rgba(255,200,0,0.2);border-radius:8px;
+                    padding:0.75rem;text-align:center;">
+          <div style="font-size:0.65rem;color:var(--white3);text-transform:uppercase;
+                      letter-spacing:0.06em;margin-bottom:0.25rem;">Fee</div>
+          <div style="font-size:1.25rem;font-weight:800;color:var(--yellow);opacity:0.8;">${FEE}</div>
           <div style="font-size:0.65rem;color:var(--white3);">tokens</div>
         </div>
         <div style="background:var(--dark);border:1px solid rgba(127,255,127,0.2);border-radius:8px;
