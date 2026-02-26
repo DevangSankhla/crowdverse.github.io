@@ -141,7 +141,7 @@ function updateMarketsPageStats() {
 // ── Share market ──────────────────────────────────────────────────────
 async function shareMarket(marketId, question, pageType = 'markets') {
   const shareUrl  = `${window.location.origin}${window.location.pathname}?page=${pageType}&id=${marketId}`;
-  const shareText = `Predict: "${question}" on CrowdVerse 🇮🇳`;
+  const shareText = `Predict: "${question}" on CrowdVerse`;
 
   if (navigator.share) {
     try {
@@ -181,23 +181,23 @@ function buildMobileNav() {
   nav.id = 'mobile-nav';
   nav.innerHTML = `
     <button class="mobile-nav-btn active" data-page="home" onclick="showPage('home')">
-      <span class="mobile-nav-icon">🏠</span>
+      <img src="assets/Home.png" class="mobile-nav-icon" alt="Home">
       <span class="mobile-nav-label">Home</span>
     </button>
     <button class="mobile-nav-btn" data-page="markets" onclick="showPage('markets')">
-      <span class="mobile-nav-icon">📈</span>
+      <img src="assets/Markets.png" class="mobile-nav-icon" alt="Markets">
       <span class="mobile-nav-label">Markets</span>
     </button>
     <button class="mobile-nav-btn" data-page="community" onclick="showPage('community')">
-      <span class="mobile-nav-icon">➕</span>
+      <img src="assets/Submit.png" class="mobile-nav-icon" alt="Submit">
       <span class="mobile-nav-label">Submit</span>
     </button>
     <button class="mobile-nav-btn" data-page="rewards" onclick="showPage('rewards')">
-      <span class="mobile-nav-icon">🎁</span>
+      <img src="assets/Rewards.png" class="mobile-nav-icon" alt="Rewards">
       <span class="mobile-nav-label">Rewards</span>
     </button>
     <button class="mobile-nav-btn" data-page="profile" onclick="showPage('profile')">
-      <span class="mobile-nav-icon">👤</span>
+      <img src="assets/Profile.png" class="mobile-nav-icon" alt="Profile">
       <span class="mobile-nav-label">Profile</span>
     </button>
   `;
@@ -239,7 +239,7 @@ function buildMobileNav() {
       }
       .mobile-nav-btn.active { color: var(--green); }
       .mobile-nav-btn:active { transform: scale(0.92); }
-      .mobile-nav-icon { font-size: 1.35rem; line-height: 1; }
+      .mobile-nav-icon { width: 24px; height: 24px; object-fit: contain; }
       .mobile-nav-label { font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 0.03em; }
       @media (max-width: 640px) {
         #mobile-nav { display: grid; }
