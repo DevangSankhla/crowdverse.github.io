@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="css/pages.css">
   <link rel="stylesheet" href="css/modal.css">
   <link rel="stylesheet" href="css/responsive.css">
+  <link rel="stylesheet" href="css/crowdverse-redesign.css">
   
   <!-- Share highlight animation -->
   <style>
@@ -105,25 +106,32 @@
           <label class="form-label">Password</label>
           <input class="form-input" id="auth-password" type="password" placeholder="Min 6 characters">
         </div>
-        <label class="age-check" id="age-check-wrap">
+        <label class="age-check" id="age-check-wrap" style="border-color: rgba(125,216,125,0.2); background: rgba(125,216,125,0.04);">
           <input type="checkbox" id="age-confirm">
-          <div class="age-check-text">
-            I confirm I am <strong>18 years of age or older.</strong> I understand that providing a false age or identity may result in <strong>permanent account deletion with no compensation.</strong> Online KYC will be required when paid features go live.
+          <div class="age-check-text" style="color: var(--cv-white2);">
+            I'm <strong style="color: var(--cv-green);">18 or older</strong> and ready to play! 🎮 
+            <span style="display: block; margin-top: 4px; font-size: 0.7rem; opacity: 0.8;">
+              This is a prediction game with virtual tokens — not gambling, not financial advice.
+            </span>
           </div>
         </label>
-        <button class="btn btn-primary w-full" id="auth-submit-btn" onclick="handleAuth()">
-          Create Account &amp; Get 1000 Tokens
+        <button class="btn btn-primary w-full" id="auth-submit-btn" onclick="handleAuth()" style="background: linear-gradient(135deg, var(--cv-green) 0%, var(--cv-green-dim) 100%); font-weight: 700;">
+          Create Account &amp; Get 1,000 Tokens 🎉
         </button>
-        <p class="disclaimer-small" id="auth-disclaimer">
-          By signing up, you agree that CrowdVerse is a game — not a financial product. Tokens have zero monetary value. This platform does not involve real-money gambling or betting. 18+ only.
+        <p class="disclaimer-small" id="auth-disclaimer" style="color: var(--cv-white3); font-size: 0.7rem;">
+          By joining, you agree to have fun responsibly! Tokens are virtual game points with no cash value. 18+ only.
         </p>
       </div>
       <div id="auth-success" class="modal-success hidden">
-        <div class="check">✅</div>
-        <h3>You're In!</h3>
-        <p>Your account is live and tokens are ready.</p>
-        <div class="tokens-granted">🎟️ 1,000 Tokens Credited</div>
-        <button class="btn btn-primary w-full" onclick="closeAuth()">Start Predicting →</button>
+        <div class="check" style="font-size: 4rem; animation: cv-pop-in 0.5s ease;">🎉</div>
+        <h3 style="color: var(--cv-green);">Welcome to CrowdVerse!</h3>
+        <p style="font-size: 0.95rem;">Your account is ready and your tokens are waiting!</p>
+        <div class="tokens-granted" style="background: linear-gradient(135deg, rgba(125,216,125,0.15) 0%, rgba(125,216,125,0.05) 100%); border: 1px solid rgba(125,216,125,0.3); animation: cv-fade-in 0.5s ease 0.2s both;">
+          <span style="font-size: 1.2rem;">💰</span> 1,000 Tokens Credited!
+        </div>
+        <button class="btn btn-primary w-full" onclick="closeAuth()" style="background: linear-gradient(135deg, var(--cv-green) 0%, var(--cv-green-dim) 100%); font-weight: 700;">
+          Start Predicting 🚀
+        </button>
       </div>
     </div>
   </div>
@@ -164,6 +172,7 @@
   <script src="js/pages.js"></script>
   <script src="js/admin.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/crowdverse-redesign.js"></script>
 
 </body>
 </html>

@@ -104,6 +104,10 @@ function onAuthSuccess(isNew) {
   document.getElementById('auth-form-wrap').classList.add('hidden');
   if (isNew) {
     document.getElementById('auth-success').classList.remove('hidden');
+    // Show safety popup for new users
+    setTimeout(() => {
+      showSafetyPopup('signup');
+    }, 500);
     // Auto-close after 3 seconds
     setTimeout(() => {
       closeAuth();

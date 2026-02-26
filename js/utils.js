@@ -185,6 +185,38 @@ _toastStyles.textContent = `
 `;
 document.head.appendChild(_toastStyles);
 
+// ─────────────────────────────────────────────────────────────────────────────
+// COLLAPSIBLE SECTIONS (Friendly disclaimers)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function createCollapsibleSection(title, icon, content, defaultOpen = false) {
+  const id = 'collapsible-' + Math.random().toString(36).substr(2, 9);
+  
+  return `
+    <div class="collapsible-section ${defaultOpen ? 'open' : ''}" id="${id}">
+      <div class="collapsible-header" onclick="toggleCollapsible('${id}')">
+        <div class="collapsible-header-title">
+          <span class="collapsible-header-icon">${icon}</span>
+          <span>${title}</span>
+        </div>
+        <span class="collapsible-toggle">▼</span>
+      </div>
+      <div class="collapsible-content">
+        <div class="collapsible-inner">
+          ${content}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function toggleCollapsible(id) {
+  const section = document.getElementById(id);
+  if (section) {
+    section.classList.toggle('open');
+  }
+}
+
 // ── Keyboard shortcuts ────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
   // Escape key closes open modals

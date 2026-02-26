@@ -48,14 +48,21 @@
     font-size: 0.7rem;
   }
 
-  /* Token badge: show but condensed */
-  .token-badge {
-    padding: 0.2rem 0.5rem;
+  /* Token wallet & streak counter */
+  .token-wallet {
+    padding: 0.3rem 0.75rem;
+    font-size: 0.75rem;
+  }
+  .token-wallet-icon {
+    width: 16px;
+    height: 16px;
+  }
+  .streak-counter {
+    padding: 0.25rem 0.6rem;
     font-size: 0.7rem;
   }
-  .token-badge img {
-    width: 12px;
-    height: 12px;
+  .streak-counter .streak-icon {
+    font-size: 0.85rem;
   }
 
   /* Hero */
@@ -249,6 +256,192 @@
 
   /* Page content: no top padding overlap */
   .page { padding-top: 56px; }
+
+  /* ═════════════════════════════════════════════════════════════════════════════
+     CROWDVERSE REDESIGN - Mobile Responsive Styles
+     ═════════════════════════════════════════════════════════════════════════════ */
+
+  /* Enhanced Market Cards */
+  .market-card-v2 {
+    padding: 1rem;
+  }
+  
+  .market-question-v2 {
+    font-size: 0.95rem;
+    line-height: 1.35;
+  }
+  
+  .outcome-bar-wrapper {
+    height: 32px;
+  }
+  
+  .outcome-bar-yes, .outcome-bar-no {
+    font-size: 0.7rem;
+  }
+  
+  .outcome-bar-label span:last-child {
+    display: none; /* Hide option labels on mobile, show only % */
+  }
+  
+  .market-card-stats {
+    padding: 0.6rem;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  
+  .stat-item-v2 {
+    font-size: 0.7rem;
+  }
+  
+  .stat-item-v2 .stat-icon {
+    font-size: 0.8rem;
+  }
+  
+  .countdown-timer {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.65rem;
+  }
+  
+  .market-vote-buttons {
+    gap: 0.5rem;
+  }
+  
+  .vote-btn-v2 {
+    padding: 0.7rem;
+    font-size: 0.85rem;
+  }
+  
+  .vote-btn-v2 .btn-label {
+    font-size: 0.7rem;
+  }
+
+  /* Wizard */
+  .wizard-card {
+    padding: 1.5rem;
+  }
+  
+  .wizard-illustration {
+    width: 100px;
+    height: 100px;
+    font-size: 2.5rem;
+  }
+  
+  .wizard-title {
+    font-size: 1.2rem;
+  }
+  
+  .wizard-desc {
+    font-size: 0.85rem;
+  }
+
+  /* Badges */
+  .badges-container {
+    gap: 0.5rem;
+  }
+  
+  .badge {
+    min-width: 70px;
+    padding: 0.6rem 0.4rem;
+  }
+  
+  .badge-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 1.2rem;
+  }
+  
+  .badge-name {
+    font-size: 0.65rem;
+  }
+
+  /* Challenges */
+  .challenge-card {
+    padding: 0.875rem;
+  }
+  
+  .challenge-title {
+    font-size: 0.85rem;
+  }
+  
+  .challenge-icon {
+    font-size: 1rem;
+  }
+  
+  .challenge-reward {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.5rem;
+  }
+  
+  .challenge-desc {
+    font-size: 0.75rem;
+  }
+
+  /* Empty States */
+  .empty-state {
+    padding: 2rem 1.5rem;
+  }
+  
+  .empty-state-illustration {
+    font-size: 3rem;
+  }
+  
+  .empty-state-title {
+    font-size: 1.1rem;
+  }
+
+  /* Collapsible Sections */
+  .collapsible-header {
+    padding: 0.875rem 1rem;
+  }
+  
+  .collapsible-header-title {
+    font-size: 0.85rem;
+  }
+  
+  .collapsible-inner {
+    padding: 0 1rem 1rem;
+    font-size: 0.8rem;
+  }
+
+  /* Safety Popup */
+  .safety-popup-content {
+    padding: 1.5rem;
+    margin: 1rem;
+  }
+  
+  .safety-popup-icon {
+    font-size: 2.5rem;
+  }
+  
+  .safety-popup h3 {
+    font-size: 1.1rem;
+  }
+
+  /* Referral Box */
+  .referral-box {
+    padding: 1rem;
+  }
+  
+  .referral-icon {
+    font-size: 1.25rem;
+  }
+  
+  .referral-title {
+    font-size: 0.9rem;
+  }
+  
+  .referral-desc {
+    font-size: 0.8rem;
+  }
+  
+  .referral-code-box {
+    flex-direction: column;
+  }
+  
+  .referral-code-input {
+    font-size: 0.75rem;
+    padding: 0.6rem;
+  }
 }
 
 /* ── Very small screens ── */
@@ -257,6 +450,28 @@
   .hero-logo { width: 80px; height: 80px; }
   .stat-item { min-width: 100%; }
   .modal { padding: 1.25rem !important; }
+  
+  /* Extra small market cards */
+  .market-card-v2 {
+    padding: 0.875rem;
+  }
+  
+  .market-category-badge {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.65rem;
+  }
+  
+  .market-question-v2 {
+    font-size: 0.9rem;
+  }
+  
+  .market-card-stats {
+    gap: 0.5rem;
+  }
+  
+  .stat-item-v2 {
+    font-size: 0.65rem;
+  }
 }
 
 /* ── Touch improvements (all mobile) ── */
@@ -275,6 +490,12 @@
 
   /* Outcomes in vote modal: bigger tap targets */
   .outcome-btn { min-height: 60px; }
+  
+  /* Touch improvements for new components */
+  .vote-btn-v2 { min-height: 52px; }
+  .badge { min-height: 80px; }
+  .challenge-card { min-height: 90px; }
+  .collapsible-header { min-height: 48px; }
 }
 
 /* ── Safe area insets (iPhone notch/home indicator) ── */

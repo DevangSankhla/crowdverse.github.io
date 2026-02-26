@@ -48,18 +48,16 @@ function buildHomePage() {
       </div>
     </div>
 
-    <!-- Legal Banner -->
+    <!-- Friendly Legal Notice (Collapsible) -->
     <div style="max-width:1100px; margin:1.5rem auto; padding:0 2rem;">
-      <div class="legal-banner">
-        <img src="assets/Legal.png" alt="Legal" class="legal-icon" style="width:32px;height:32px;object-fit:contain;flex-shrink:0;">
-        <p>
-          <strong>Fully Legal & Compliant:</strong> CrowdVerse operates exclusively with virtual
-          game tokens — no real money is ever deposited, wagered, or withdrawn. We comply fully
-          with Indian law by offering a skill-based opinion and prediction platform. This is
-          <strong>NOT betting or gambling.</strong> Tokens have no monetary value and cannot be
-          converted to cash.
-        </p>
-      </div>
+      ${createCollapsibleSection(
+        "Let's Get Started Safely! 🛡️",
+        "✨",
+        `<p style="margin-bottom:0.75rem;"><strong>CrowdVerse is a fun prediction game</strong> using virtual tokens — no real money is ever deposited, wagered, or withdrawn.</p>
+         <p style="margin-bottom:0.75rem;">We comply fully with Indian law by offering a skill-based opinion platform. <strong>This is NOT betting or gambling.</strong></p>
+         <p>Tokens have no monetary value and cannot be converted to cash. Play responsibly! 🎮</p>`,
+        false
+      )}
     </div>
 
     <!-- How It Works -->
@@ -116,20 +114,19 @@ function buildHomePage() {
     <!-- Weekly Bonus -->
     <div class="section" style="padding-top:0">
       <div class="section-label">Weekly Bonus</div>
-      <h2>Free Tokens, Every Week</h2>
+      <h2>Free Tokens, Every Week 🎁</h2>
       <p style="color:var(--white2);margin-bottom:1.5rem;max-width:620px;line-height:1.7;">
         During our launch phase, every user receives
         <strong style="color:var(--green)">200 free tokens every week</strong> — no payment needed.
+        Just log in and claim your bonus!
       </p>
-      <div class="legal-banner">
-        <img src="assets/Lock.png" style="width:32px;height:32px;flex-shrink:0;" alt="Lock">
-        <p>
-          When paid subscriptions launch, they will be priced for access to prediction tools —
-          <strong>NOT</strong> for purchasing outcomes. All tiers will have strict limits in
-          accordance with Indian IT and gaming regulations. Full online KYC verification will
-          be required at that stage.
-        </p>
-      </div>
+      ${createCollapsibleSection(
+        "About Future Subscriptions 🔒",
+        "🔮",
+        `<p style="margin-bottom:0.75rem;">When paid subscriptions launch, they will be priced for <strong>access to premium prediction tools</strong> — NOT for purchasing outcomes.</p>
+         <p>All tiers will have strict limits per Indian IT and gaming regulations. Full online KYC verification will be required at that stage.</p>`,
+        false
+      )}
     </div>
 
     ${buildFooter()}

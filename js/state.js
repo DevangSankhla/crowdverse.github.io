@@ -17,6 +17,13 @@ const State = {
   // Vote modal
   activeMarketId:     null,
   selectedVoteOption: null,  // 'a' | 'b'
+  
+  // Gamification - Streaks & Badges
+  userStreak:        { current: 0, best: 0 },
+  userBadges:        {},     // { badgeId: unlockedAt }
+  userChallenges:    {},     // { challengeId: { current, completed, completedAt } }
+  userShares:        0,
+  lastPredictionDate: null,
 };
 
 // ── No sample markets - all data comes from Firestore ─────────────────
