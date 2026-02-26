@@ -14,6 +14,24 @@ function escHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
+/**
+ * Get category icon HTML with image
+ */
+function getCategoryIconHtml(catString) {
+  if (!catString) return '';
+  
+  const catLower = catString.toLowerCase();
+  
+  if (catLower.includes('sport')) return `<img src="assets/Sports.png" class="cat-icon" alt="">Sports`;
+  if (catLower.includes('economy')) return `<img src="assets/Economy.png" class="cat-icon" alt="">Economy`;
+  if (catLower.includes('entertainment')) return `<img src="assets/Entertainment.png" class="cat-icon" alt="">Entertainment`;
+  if (catLower.includes('tech')) return `<img src="assets/Tech.png" class="cat-icon" alt="">Tech`;
+  if (catLower.includes('crypto')) return `<img src="assets/Crypto.png" class="cat-icon" alt="">Crypto`;
+  if (catLower.includes('climate')) return `<img src="assets/Climate.png" class="cat-icon" alt="">Climate`;
+  
+  return catString.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim();
+}
+
 let _toastThrottleTimer = null;
 let _lastToastMessage = '';
 let _lastToastTime = 0;

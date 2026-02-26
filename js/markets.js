@@ -296,7 +296,7 @@ function _renderMarketCard(m, container) {
       </button>
     </div>
 
-    <div class="market-cat" style="margin-bottom:0.4rem;">${escHtml(m.cat || '')}</div>
+    <div class="market-cat" style="margin-bottom:0.4rem;">${getCategoryIconHtml(m.cat || '')}</div>
     <h3 style="margin-bottom:1rem;">${escHtml(m.question)}</h3>
 
     <!-- Probability bar -->

@@ -83,7 +83,7 @@ function buildHomePage() {
         </div>
         <div class="step-card">
           <div class="step-num">03</div>
-          <img src="assets/Submit.png" alt="Watch" class="step-icon-img" style="width:48px;height:48px;object-fit:contain;margin-bottom:0.75rem;">
+          <img src="assets/Odds.png" alt="Watch" class="step-icon-img" style="width:48px;height:48px;object-fit:contain;margin-bottom:0.75rem;">
           <h3>Watch Odds Shift</h3>
           <p>As more users predict, odds shift in real-time — just like real prediction
              markets. The crowd decides.</p>
@@ -1027,7 +1027,7 @@ function updateHomeMarketsPreview() {
       <div class="market-card" data-market-id="${marketId}"
            onclick="if(event.target.closest('.share-btn')) return; if(!State.currentUser){openAuth();return;} if('${daysLeft}'==='Ended'){showToast('This market has ended','red');return;} openVote('${marketId}',null,event)">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
-          <div class="market-cat">${escHtml(m.cat)}</div>
+          <div class="market-cat">${getCategoryIconHtml(m.cat)}</div>
           <button class="share-btn"
                   onclick="event.stopPropagation();shareMarket('${marketId}','${escHtml(m.question).replace(/'/g, "\\'")}','markets')"
                   style="background:var(--white1);border:none;border-radius:50%;width:30px;height:30px;
