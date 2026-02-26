@@ -131,7 +131,7 @@ function buildFooter() {
       </div>
       <div class="footer-bottom">
         <span>© 2026 CrowdVerse. All Rights Reserved.</span>
-        <span>Made in India 🇮🇳 &nbsp;|&nbsp; Not a gambling platform</span>
+        <span>Made in India &nbsp;|&nbsp; Not a gambling platform</span>
       </div>
     </footer>`;
 }

@@ -2,6 +2,11 @@
 // markets.js — Render markets list, create market, vote modal
 // ─────────────────────────────────────────────────────────────────────
 
+// Prediction constants
+const MAX_PREDICTION_AMOUNT = 500000;  // Maximum tokens per prediction
+const PREDICTION_FEE = 20;             // Fixed fee per prediction
+const MIN_STAKE = 25;                  // Minimum total (20 fee + 5 stake)
+
 // ── Real-time unsubscribe functions ───────────────────────────────────
 let _marketsUnsubscribe = null;
 let _marketVotesUnsubscribe = {};
@@ -276,6 +281,9 @@ function _renderMarketCard(m, container) {
         ${hasVoted ? `<span style="font-family:var(--font-mono);font-size:0.62rem;color:var(--white3);
                               background:var(--white1);border:1px solid var(--border2);
                               padding:0.1rem 0.4rem;border-radius:4px;">✓ Predicted</span>` : ''}
+        <button class="read-btn" onclick="event.stopPropagation();openReadModal('${marketId}')">
+          Read
+        </button>
       </div>
       <button onclick="event.stopPropagation();shareMarket('${marketId}','${escHtml(m.question).replace(/'/g, "\\'")}','markets')"
               style="background:var(--white1);border:none;border-radius:50%;width:34px;height:34px;min-width:34px;
@@ -312,7 +320,7 @@ function _renderMarketCard(m, container) {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.75rem;
                 font-family:var(--font-mono);font-size:0.7rem;color:var(--white3);flex-wrap:wrap;gap:0.4rem;">
       ${daysLeft ? `<span style="color:${daysLeft.includes('⚡') ? 'var(--yellow)' : 'var(--white3)'};">${daysLeft}</span>` : `<span>Ends: ${escHtml(String(m.ends || '—'))}</span>`}
-      <span style="color:var(--green-dim);">🎟️ ${totalTokens.toLocaleString()} pooled</span>
+      <span style="color:var(--green-dim);"><img src="assets/Token.png" style="width:14px;height:14px;vertical-align:middle;margin-right:3px;">${totalTokens.toLocaleString()} pooled</span>
     </div>
 
     ${isLive
@@ -395,7 +403,7 @@ function openVote(marketId, preselectedOpt, e) {
     <div class="modal" style="max-width:420px;padding:0;overflow:hidden;
                                background:var(--off-black);border:1px solid var(--border2);">
       <!-- Header -->
-      <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);">
+      <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);flex-shrink:0;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.75rem;">
           <div style="flex:1;min-width:0;">
             <div style="font-size:0.68rem;color:var(--green);opacity:0.8;text-transform:uppercase;
@@ -408,12 +416,14 @@ function openVote(marketId, preselectedOpt, e) {
                          justify-content:center;border-radius:50%;flex-shrink:0;">✕</button>
         </div>
         <div style="margin-top:0.5rem;font-size:0.72rem;color:var(--white3);font-family:var(--font-mono);">
-          ${dLeft ? dLeft + ' · ' : ''}${total.toLocaleString()} tokens pooled
+          ${dLeft ? dLeft + ' · ' : ''}<img src="assets/Token.png" style="width:12px;height:12px;vertical-align:middle;margin-right:2px;">${total.toLocaleString()} pooled
         </div>
       </div>
 
-      <!-- AI Market Context Panel (populated async by groq.js) -->
-      <div id="groq-context-panel" style="display:none;"></div>
+      <!-- Scrollable Content Area -->
+      <div style="overflow-y:auto;max-height:calc(85vh - 200px);">
+        <!-- AI Market Context Panel (populated async by groq.js) -->
+        <div id="groq-context-panel" style="display:none;"></div>
 
       <!-- Outcome + Amount -->
       <div style="padding:1.25rem 1.5rem;">
@@ -460,28 +470,33 @@ function openVote(marketId, preselectedOpt, e) {
         <div style="margin-top:1.25rem;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
             <span style="font-size:0.68rem;color:var(--white3);text-transform:uppercase;letter-spacing:0.05em;">Amount</span>
-            <span style="font-size:0.78rem;color:var(--white3);">Balance: <strong style="color:var(--green);opacity:0.9;">${State.userTokens.toLocaleString()}</strong></span>
+            <span style="font-size:0.78rem;color:var(--white3);">Balance: <strong style="color:var(--green);opacity:0.9;"><img src="assets/Token.png" style="width:12px;height:12px;vertical-align:middle;margin-right:2px;">${State.userTokens.toLocaleString()}</strong></span>
           </div>
 
           <input type="range" id="vote-amount-slider"
-                 min="10" max="${Math.max(10, Math.min(Math.max(State.userTokens, 10), 5000))}" value="${Math.min(50, Math.max(State.userTokens, 10))}"
+                 min="${MIN_STAKE}" max="${Math.min(Math.max(State.userTokens, MIN_STAKE), MAX_PREDICTION_AMOUNT)}" 
+                 value="${Math.min(50, Math.max(State.userTokens, MIN_STAKE))}"
+                 step="5"
                  oninput="updatePotentialWinnings()"
-                 ${State.userTokens < 10 ? 'disabled' : ''}
+                 ${State.userTokens < MIN_STAKE ? 'disabled' : ''}
                  style="width:100%;height:5px;-webkit-appearance:none;appearance:none;
-                        background:var(--white1);border-radius:3px;outline:none;cursor:${State.userTokens < 10 ? 'not-allowed' : 'pointer'};margin-bottom:0.75rem;opacity:${State.userTokens < 10 ? '0.5' : '1'};">
+                        background:var(--white1);border-radius:3px;outline:none;cursor:${State.userTokens < MIN_STAKE ? 'not-allowed' : 'pointer'};margin-bottom:0.75rem;opacity:${State.userTokens < MIN_STAKE ? '0.5' : '1'};">
 
           <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
-            <input type="number" id="vote-amount-input" value="50" min="10" max="${State.userTokens}"
+            <input type="number" id="vote-amount-input" value="50" min="${MIN_STAKE}" max="${Math.min(State.userTokens, MAX_PREDICTION_AMOUNT)}" step="5"
                    oninput="syncSliderWithInput()"
                    style="flex:1;padding:0.7rem;background:var(--white1);border:1px solid var(--border2);
                           border-radius:8px;color:var(--white);font-size:1rem;font-weight:600;
                           text-align:center;outline:none;">
-            <span style="color:var(--white3);font-size:0.78rem;white-space:nowrap;">tokens</span>
+            <span style="color:var(--white3);font-size:0.78rem;white-space:nowrap;"><img src="assets/Token.png" style="width:12px;height:12px;vertical-align:middle;margin-right:2px;">tokens</span>
           </div>
 
+          <div style="font-size:0.7rem;color:var(--white3);margin-bottom:0.5rem;text-align:center;">
+            <span style="color:var(--yellow);">⚠️ 20 token fee applies</span> · Multiples of 5 only · Max 500,000
+          </div>
           <div style="display:flex;gap:0.35rem;">
-            ${[10, 50, 100, 'Half', 'Max'].map(v => `
-              <button onclick="setAmount(${v === 'Half' ? 'Math.floor(State.userTokens/2)' : v === 'Max' ? 'State.userTokens' : v})"
+            ${[25, 100, 500, 'Half', 'Max'].map(v => `
+              <button onclick="setAmount(${v === 'Half' ? 'Math.floor(Math.min(State.userTokens, MAX_PREDICTION_AMOUNT)/2)' : v === 'Max' ? 'Math.min(State.userTokens, MAX_PREDICTION_AMOUNT)' : v})"
                       style="flex:1;padding:0.4rem 0.2rem;background:var(--white1);border:none;
                              border-radius:6px;color:var(--white3);font-size:0.68rem;cursor:pointer;
                              transition:all 0.15s;font-family:var(--font-mono);"
@@ -508,8 +523,10 @@ function openVote(marketId, preselectedOpt, e) {
         </div>
       </div>
 
+      </div>
+
       <!-- Confirm -->
-      <div style="padding:0.75rem 1.5rem 1.5rem;">
+      <div style="padding:0.75rem 1.5rem 1.5rem;border-top:1px solid var(--border);flex-shrink:0;background:var(--off-black);">
         <button id="confirm-vote-btn" onclick="confirmPolymarketVote()"
                 style="width:100%;padding:0.95rem;
                        background:${preselectedOpt ? 'var(--green)' : 'var(--white1)'};
@@ -562,6 +579,112 @@ function closePolymarketVoteModal() {
   }
   State.selectedVoteOption = null;
   State.activeMarketId     = null;
+}
+
+// ── Open Read Modal (Read-only mode to view AI Summary) ─────────────────
+function openReadModal(marketId) {
+  const id = String(marketId);
+  const m  = findMarketById(id);
+  if (!m) {
+    if (!demoMode && db) fetchAndShowMarketModal(id);
+    else showToast('Market not found', 'red');
+    return;
+  }
+
+  State.activeMarketId = id;
+  State.selectedVoteOption = null;
+
+  const pctA   = m.pctA || 50;
+  const pctB   = 100 - pctA;
+  const oddsA  = pctA > 0 ? (100 / pctA).toFixed(2) : '∞';
+  const oddsB  = pctB > 0 ? (100 / pctB).toFixed(2) : '∞';
+  const total  = m.totalTokens || m.tokens || 0;
+  const dLeft  = getDaysRemaining(m.ends);
+
+  let modal = document.getElementById('polymarket-vote-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id        = 'polymarket-vote-modal';
+    modal.className = 'modal-overlay';
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = `
+    <div class="modal" style="max-width:420px;padding:0;overflow:hidden;
+                               background:var(--off-black);border:1px solid var(--border2);">
+      <!-- Header -->
+      <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);flex-shrink:0;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.75rem;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:0.68rem;color:var(--green);opacity:0.8;text-transform:uppercase;
+                        letter-spacing:0.1em;margin-bottom:0.25rem;">${escHtml(m.cat || '')}</div>
+            <h3 style="font-size:0.95rem;line-height:1.45;margin:0;color:var(--white);">${escHtml(m.question)}</h3>
+          </div>
+          <button onclick="closePolymarketVoteModal()"
+                  style="background:none;border:none;color:var(--white3);font-size:1.4rem;cursor:pointer;
+                         padding:0;width:32px;height:32px;display:flex;align-items:center;
+                         justify-content:center;border-radius:50%;flex-shrink:0;">✕</button>
+        </div>
+        <div style="margin-top:0.5rem;font-size:0.72rem;color:var(--white3);font-family:var(--font-mono);">
+          ${dLeft ? dLeft + ' · ' : ''}<img src="assets/Token.png" style="width:12px;height:12px;vertical-align:middle;margin-right:2px;">${total.toLocaleString()} pooled
+        </div>
+      </div>
+
+      <!-- Scrollable Content Area -->
+      <div style="overflow-y:auto;max-height:calc(85vh - 140px);padding:1.25rem 1.5rem;">
+        <!-- AI Market Context Panel (populated async by groq.js) -->
+        <div id="groq-context-panel" style="display:none;margin:0 0 1rem 0;"></div>
+
+        <!-- Market Stats -->
+        <div style="display:flex;flex-direction:column;gap:0.55rem;margin-bottom:1.5rem;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.875rem 1rem;
+                      background:var(--dark);border:1px solid var(--border2);border-radius:10px;">
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+              <span style="font-weight:600;color:var(--white);font-size:0.9rem;">${escHtml(m.optA || 'Yes')}</span>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:1.1rem;font-weight:800;color:var(--green);opacity:0.9;">${pctA}%</div>
+              <div style="font-size:0.65rem;color:var(--white3);">${oddsA}x payout</div>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.875rem 1rem;
+                      background:var(--dark);border:1px solid var(--border2);border-radius:10px;">
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+              <span style="font-weight:600;color:var(--white);font-size:0.9rem;">${escHtml(m.optB || 'No')}</span>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:1.1rem;font-weight:800;color:var(--red);opacity:0.9;">${pctB}%</div>
+              <div style="font-size:0.65rem;color:var(--white3);">${oddsB}x payout</div>
+            </div>
+          </div>
+        </div>
+
+        <p style="font-size:0.8rem;color:var(--white3);line-height:1.6;margin:0 0 1rem 0;">
+          Read the AI briefing above to understand the market context, then click below to place your prediction.
+        </p>
+      </div>
+
+      <!-- Footer Actions -->
+      <div style="padding:0.75rem 1.5rem 1.5rem;border-top:1px solid var(--border);flex-shrink:0;background:var(--off-black);">
+        <button onclick="closePolymarketVoteModal();setTimeout(()=>openVote('${id}',null,null),300);"
+                style="width:100%;padding:0.95rem;background:var(--green);color:var(--black);
+                       border:none;border-radius:10px;font-size:0.95rem;font-weight:700;
+                       cursor:pointer;transition:all 0.2s;">
+          Place Prediction →
+        </button>
+      </div>
+    </div>
+  `;
+
+  modal.style.display = 'flex';
+  void modal.offsetWidth;
+  modal.classList.add('active');
+
+  // Load AI context async — non-blocking
+  if (typeof loadAndInjectContext === 'function') {
+    loadAndInjectContext(id, m.question, m.cat || '');
+  }
 }
 
 let currentOdds = 1;
@@ -636,7 +759,10 @@ function setAmount(amount) {
   const slider = document.getElementById('vote-amount-slider');
   const input  = document.getElementById('vote-amount-input');
   if (!slider || !input) return;
-  const valid = Math.min(Math.max(Number(amount) || 10, 10), State.userTokens);
+  // Round to nearest multiple of 5
+  let valid = Math.round(Number(amount) / 5) * 5;
+  // Ensure at least MIN_STAKE (25) and at most MAX_PREDICTION_AMOUNT or user's tokens
+  valid = Math.min(Math.max(valid, MIN_STAKE), Math.min(State.userTokens, MAX_PREDICTION_AMOUNT));
   slider.value = valid;
   input.value  = valid;
   updatePotentialWinnings();
@@ -647,7 +773,10 @@ function syncSliderWithInput() {
   const slider = document.getElementById('vote-amount-slider');
   const input  = document.getElementById('vote-amount-input');
   if (!slider || !input) return;
-  let val = Math.min(Math.max(parseInt(input.value) || 10, 10), State.userTokens);
+  // Round to nearest multiple of 5
+  let val = Math.round((parseInt(input.value) || MIN_STAKE) / 5) * 5;
+  // Ensure at least MIN_STAKE and at most MAX_PREDICTION_AMOUNT or user's tokens
+  val = Math.min(Math.max(val, MIN_STAKE), Math.min(State.userTokens, MAX_PREDICTION_AMOUNT));
   slider.value = val;
   input.value  = val;
   updatePotentialWinnings();
@@ -659,9 +788,10 @@ function updatePotentialWinnings() {
   const input  = document.getElementById('vote-amount-input');
   if (!slider || !input) return;
   
-  // Clamp amount between 10 and user's tokens
-  let amount = parseInt(slider.value) || 50;
-  amount = Math.max(10, Math.min(amount, State.userTokens));
+  // Clamp amount between MIN_STAKE and user's tokens (max 500,000), round to multiple of 5
+  let amount = parseInt(slider.value) || MIN_STAKE;
+  amount = Math.round(amount / 5) * 5;
+  amount = Math.min(Math.max(amount, MIN_STAKE), Math.min(State.userTokens, MAX_PREDICTION_AMOUNT));
   
   slider.value = amount;
   input.value  = amount;
@@ -671,7 +801,9 @@ function updatePotentialWinnings() {
   const mulEl = document.getElementById('payout-multiplier');
   
   if (State.selectedVoteOption) {
-    const potReturn = Math.floor(amount * currentOdds);
+    // Calculate potential win based on stake amount (total - fee)
+    const stakeAmount = Math.max(0, amount - PREDICTION_FEE);
+    const potReturn = Math.floor(stakeAmount * currentOdds);
     if (returnEl) returnEl.textContent = '+' + potReturn.toLocaleString();
     if (mulEl) mulEl.textContent = currentOdds.toFixed(2) + 'x';
   } else {
@@ -692,43 +824,70 @@ async function confirmPolymarketVote() {
   const slider = document.getElementById('vote-amount-slider');
   if (!slider) { return; }
   
-  const amount = parseInt(slider.value, 10);
-  if (!amount || amount < 10) { showToast('Minimum stake is 10 tokens', 'yellow'); return; }
-  if (amount > State.userTokens) { showToast('Not enough tokens!', 'red'); return; }
+  const totalAmount = parseInt(slider.value, 10);
+  if (!totalAmount || totalAmount < MIN_STAKE) { showToast('Minimum total is 25 tokens (20 fee + 5 stake)', 'yellow'); return; }
+  
+  // Validate amount is multiple of 5
+  if (totalAmount % 5 !== 0) { showToast('Amount must be in multiples of 5', 'yellow'); return; }
+  
+  // The actual stake is total minus the fee
+  const stakeAmount = totalAmount - PREDICTION_FEE;
+  if (stakeAmount < 5) { showToast('Minimum stake after fee is 5 tokens', 'yellow'); return; }
+
+  // Fetch fresh token balance from Firestore to prevent stale-state bugs
+  let freshTokens = State.userTokens;
+  if (!demoMode && db && State.currentUser) {
+    try {
+      const userSnap = await db.collection('users').doc(State.currentUser.uid).get();
+      if (userSnap.exists && typeof userSnap.data().tokens === 'number') {
+        freshTokens = userSnap.data().tokens;
+        State.userTokens = freshTokens; // sync local state
+        updateTokenDisplay();
+      }
+    } catch (_) { /* use local value if fetch fails */ }
+  }
+  
+  if (totalAmount > freshTokens) { showToast(`Not enough tokens! Need ${totalAmount} (${stakeAmount} + ${PREDICTION_FEE} fee)`, 'red'); return; }
 
   const m = findMarketById(String(State.activeMarketId));
   if (!m) { showToast('Market not found', 'red'); return; }
 
-  // Calculate odds and potential win
+  // Calculate odds and potential win (based on stake amount, not total)
   const pctA   = m.pctA || 50;
   const pctB   = 100 - pctA;
   const oddsA  = pctA > 0 ? (100 / pctA) : 2;
   const oddsB  = pctB > 0 ? (100 / pctB) : 2;
   const liveOdds = State.selectedVoteOption === 'a' ? oddsA : oddsB;
-  const potentialWin = Math.floor(amount * liveOdds);
+  const potentialWin = Math.floor(stakeAmount * liveOdds);
   const optLabel = State.selectedVoteOption === 'a' ? (m.optA || 'Yes') : (m.optB || 'No');
 
   // ── Attention gate: user must confirm they've read the context ──────
-  const confirmed = await showAttentionOverlay(optLabel, amount, potentialWin);
+  const confirmed = await showAttentionOverlay(optLabel, totalAmount, potentialWin);
   if (!confirmed) return; // User bailed
   // ── End attention gate ─────────────────────────────────────────────
   
+  // Prevent double submission - check flag immediately before any state changes
+  if (_isSubmittingPrediction) { return; }
   _isSubmittingPrediction = true;
   
   // Build prediction entry - ensure no undefined values
+  // Note: we record stakeAmount (total - fee), not totalAmount
   const predictionEntry = {
     marketId:    String(State.activeMarketId),
     question:    m.question || 'Unknown',
     option:      optLabel,
-    amount:      amount,
+    amount:      stakeAmount,  // Actual stake after fee
+    fee:         PREDICTION_FEE,  // Fee charged
+    totalDeducted: totalAmount,  // Total deducted from user
     potentialWin: potentialWin,
     odds:        Math.round(liveOdds * 100) / 100, // Round to 2 decimal places
     status:      'pending',
     createdAt:   new Date().toISOString()
   };
 
-  // Optimistic local update
-  State.userTokens -= amount;
+  // Optimistic local update (ensure never goes below 0)
+  // Deduct total amount (stake + fee)
+  State.userTokens = Math.max(0, State.userTokens - totalAmount);
   State.userPredictions.push(predictionEntry);
 
   // Disable confirm button immediately to prevent double-submit
@@ -749,46 +908,47 @@ async function confirmPolymarketVote() {
       
       // Verify user has sufficient tokens before batch
       const userSnap = await userRef.get();
-      const userData = userSnap.exists ? userSnap.data() : { tokens: 1000 };
-      const currentTokens = userData.tokens || 1000;
+      const userData = userSnap.exists ? userSnap.data() : { tokens: 0 };
+      const currentTokens = typeof userData.tokens === 'number' ? userData.tokens : 0;
       
-      if (currentTokens < amount) {
-        State.userTokens += amount;
+      if (currentTokens < totalAmount) {
+        State.userTokens += totalAmount;
         State.userPredictions.pop();
         if (btn) { btn.disabled = false; btn.textContent = 'Place Prediction'; }
         _isSubmittingPrediction = false;
-        showToast('Not enough tokens!', 'red');
+        showToast(`Not enough tokens! Need ${totalAmount} (${stakeAmount} stake + ${PREDICTION_FEE} fee)`, 'red');
         return;
       }
       
       // Execute batch write for atomicity
       const batch = db.batch();
       
-      // 1. Record the vote
+      // 1. Record the vote (stake amount only, fee goes to platform)
       batch.set(voteRef, {
         userId:    State.currentUser.uid,
         userName:  State.currentUser.displayName || State.currentUser.email?.split('@')[0] || 'User',
         option:    State.selectedVoteOption,
-        amount:    amount,
+        amount:    stakeAmount,  // Only stake goes to market pool
+        fee:       PREDICTION_FEE,  // Fee recorded
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       
-      // 2. Deduct user tokens and add prediction
+      // 2. Deduct user tokens (total = stake + fee) and add prediction
       batch.update(userRef, {
-        tokens:      firebase.firestore.FieldValue.increment(-amount),
+        tokens:      firebase.firestore.FieldValue.increment(-totalAmount),
         predictions: firebase.firestore.FieldValue.arrayUnion(predictionEntry)
       });
       
-      // 3. Increment market token pool
+      // 3. Increment market token pool (only stake amount, not fee)
       batch.update(mktRef, {
-        tokens: firebase.firestore.FieldValue.increment(amount)
+        tokens: firebase.firestore.FieldValue.increment(stakeAmount)
       });
       
       await batch.commit();
       
     } catch (e) {
       // Rollback local state on failure
-      State.userTokens += amount;
+      State.userTokens += totalAmount;
       State.userPredictions.pop();
       console.error('Vote commit failed:', e);
       if (btn) { btn.disabled = false; btn.textContent = 'Place Prediction'; }
@@ -801,7 +961,7 @@ async function confirmPolymarketVote() {
 
   updateTokenDisplay();
   closePolymarketVoteModal();
-  showToast(`🎯 ${amount} tokens on "${optLabel}" — potential +${potentialWin} if correct!`, 'green');
+  showToast(`${stakeAmount} tokens staked (+${PREDICTION_FEE} fee) — potential +${potentialWin} if correct!`, 'green');
 
   // Refresh markets to show "Predicted" badge
   renderMarkets(_currentMarketFilter);
