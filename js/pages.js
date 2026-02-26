@@ -1075,7 +1075,7 @@ function buildAdminPage() {
   if (!el) return;
   el.innerHTML = `
     <div id="admin-auth-wall" class="coming-soon-wrap">
-      <div style="font-size:3.5rem;margin-bottom:1rem">🔐</div>
+      <img src="assets/Lock.png" alt="Lock" style="width:56px;height:56px;margin-bottom:1rem;">
       <h2 style="font-family:var(--font-display)">Admin Access Only</h2>
       <p>This area is restricted to CrowdVerse administrators.</p>
       <button class="btn btn-primary btn-lg" onclick="openAuth()">Log In as Admin</button>

@@ -138,7 +138,7 @@ function buildFooter() {
           <span class="footer-brand-name">Crowd<span class="accent">Verse</span></span>
         </div>
         <div class="footer-disclaimer">
-          <strong>⚠️ Important Disclaimer:</strong> CrowdVerse is a skill-based prediction and
+          <img src="assets/Disclaimer.png" alt="Disclaimer" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;"><strong>Important Disclaimer:</strong> CrowdVerse is a skill-based prediction and
           opinion platform. We do <em>not</em> encourage, facilitate, or endorse betting or
           gambling in any form. All activity uses virtual game tokens with
           <strong>no monetary value</strong>. Tokens cannot be converted to cash.
