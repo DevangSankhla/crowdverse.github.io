@@ -111,12 +111,10 @@ function updateTokenDisplay() {
 function updateNavForAuth() {
   const loggedIn   = !!State.currentUser;
   const loginBtn   = document.getElementById('nav-login-btn');
-  const logoutBtn  = document.getElementById('nav-logout-btn');
   const tokenBadge = document.getElementById('token-nav-badge');
   const adminLink  = document.getElementById('admin-nav-link');
 
   if (loginBtn)   loginBtn.style.display   = loggedIn ? 'none' : '';
-  if (logoutBtn)  logoutBtn.style.display  = loggedIn ? '' : 'none';
   if (tokenBadge) tokenBadge.style.display = loggedIn ? '' : 'none';
 
   if (adminLink) {

@@ -122,7 +122,7 @@ function buildHomePage() {
         <strong style="color:var(--green)">200 free tokens every week</strong> — no payment needed.
       </p>
       <div class="legal-banner">
-        <div class="icon">🔒</div>
+        <img src="assets/Lock.png" style="width:32px;height:32px;flex-shrink:0;" alt="Lock">
         <p>
           When paid subscriptions launch, they will be priced for access to prediction tools —
           <strong>NOT</strong> for purchasing outcomes. All tiers will have strict limits in
@@ -175,7 +175,7 @@ function buildCommunityPage() {
       ${!State.currentUser ? `
         <!-- Not logged in -->
         <div style="background:var(--off-black);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2.5rem;text-align:center;">
-          <div style="font-size:3rem;margin-bottom:1rem;">🔒</div>
+          <img src="assets/Lock.png" style="width:64px;height:64px;margin-bottom:1rem;" alt="Lock">
           <h3 style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;margin-bottom:0.5rem;">Log in to Submit</h3>
           <p style="color:var(--white2);font-size:0.85rem;margin-bottom:1.5rem;">You need an account to submit prediction markets.</p>
           <button class="btn btn-primary btn-lg" onclick="openAuth()">Log In / Sign Up</button>
