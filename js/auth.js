@@ -7,10 +7,26 @@ function openAuth() {
   document.getElementById('auth-error').style.display = 'none';
   document.getElementById('auth-form-wrap').classList.remove('hidden');
   document.getElementById('auth-success').classList.add('hidden');
+  
+  // Reset forgot password state
+  document.getElementById('forgot-password-wrap').classList.add('hidden');
+  document.getElementById('forgot-success').style.display = 'none';
+  document.getElementById('forgot-error').style.display = 'none';
 }
 
 function closeAuth() {
   document.getElementById('auth-modal').classList.remove('open');
+  
+  // Reset forgot password state after a delay (so it's not visible when closing)
+  setTimeout(() => {
+    document.getElementById('forgot-password-wrap').classList.add('hidden');
+    document.getElementById('forgot-success').style.display = 'none';
+    document.getElementById('forgot-error').style.display = 'none';
+    document.getElementById('forgot-email').value = '';
+    document.getElementById('forgot-submit-btn').disabled = false;
+    document.getElementById('forgot-submit-btn').textContent = 'Send Reset Link →';
+    document.getElementById('auth-form-wrap').classList.remove('hidden');
+  }, 300);
 }
 
 function switchTab(mode) {
@@ -196,6 +212,85 @@ function showAuthError(msg) {
   const el = document.getElementById('auth-error');
   el.textContent   = msg;
   el.style.display = '';
+}
+
+// ── Forgot Password Functions ─────────────────────────────────────────
+
+function showForgotPassword() {
+  document.getElementById('auth-form-wrap').classList.add('hidden');
+  document.getElementById('forgot-password-wrap').classList.remove('hidden');
+  document.getElementById('auth-error').style.display = 'none';
+  
+  // Pre-fill email if already entered in auth form
+  const authEmail = document.getElementById('auth-email').value;
+  if (authEmail) {
+    document.getElementById('forgot-email').value = authEmail;
+  }
+  
+  // Focus on email field
+  setTimeout(() => {
+    document.getElementById('forgot-email').focus();
+  }, 100);
+}
+
+function backToAuth() {
+  document.getElementById('forgot-password-wrap').classList.add('hidden');
+  document.getElementById('forgot-success').style.display = 'none';
+  document.getElementById('forgot-error').style.display = 'none';
+  document.getElementById('auth-form-wrap').classList.remove('hidden');
+}
+
+async function handleForgotPassword() {
+  const email = document.getElementById('forgot-email').value.trim();
+  const btn = document.getElementById('forgot-submit-btn');
+  const errorEl = document.getElementById('forgot-error');
+  const successEl = document.getElementById('forgot-success');
+  
+  if (!email) {
+    errorEl.textContent = 'Please enter your email address.';
+    errorEl.style.display = '';
+    return;
+  }
+  
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Sending...';
+  errorEl.style.display = 'none';
+  
+  // Demo mode - just show success
+  if (demoMode) {
+    await new Promise(r => setTimeout(r, 1000));
+    successEl.style.display = '';
+    btn.disabled = false;
+    btn.textContent = 'Send Reset Link →';
+    return;
+  }
+  
+  try {
+    await auth.sendPasswordResetEmail(email);
+    successEl.style.display = '';
+    btn.textContent = 'Email Sent!';
+    
+    // Also show toast
+    showToast('Password reset email sent! Check your inbox 📧', 'green');
+  } catch (e) {
+    let msg = 'Failed to send reset email. Please try again.';
+    if (e.code === 'auth/user-not-found') {
+      // For security, don't reveal if email exists or not
+      // But show success anyway to prevent email enumeration attacks
+      successEl.style.display = '';
+      btn.textContent = 'Email Sent!';
+      showToast('If an account exists, a reset email was sent 📧', 'green');
+      btn.disabled = false;
+      return;
+    }
+    if (e.code === 'auth/invalid-email') msg = 'Please enter a valid email address.';
+    if (e.code === 'auth/too-many-requests') msg = 'Too many attempts. Please try again later.';
+    
+    errorEl.textContent = msg;
+    errorEl.style.display = '';
+    btn.disabled = false;
+    btn.textContent = 'Send Reset Link →';
+  }
 }
 
 // ── Weekly bonus check ────────────────────────────────────────────────

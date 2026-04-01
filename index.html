@@ -103,7 +103,13 @@
           <input class="form-input" id="auth-email" type="email" placeholder="you@example.com">
         </div>
         <div class="form-group">
-          <label class="form-label">Password</label>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+            <label class="form-label" style="margin-bottom: 0;">Password</label>
+            <a href="#" onclick="showForgotPassword(); return false;" style="font-size: 0.75rem; color: var(--cv-green); text-decoration: none;" 
+               onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+              Forgot password?
+            </a>
+          </div>
           <input class="form-input" id="auth-password" type="password" placeholder="Min 6 characters">
         </div>
         <label class="age-check" id="age-check-wrap" style="border-color: rgba(125,216,125,0.2); background: rgba(125,216,125,0.04);">
@@ -131,6 +137,30 @@
         </div>
         <button class="btn btn-primary w-full" onclick="closeAuth()" style="background: linear-gradient(135deg, var(--cv-green) 0%, var(--cv-green-dim) 100%); font-weight: 700;">
           Start Predicting 🚀
+        </button>
+      </div>
+
+      <!-- ─── FORGOT PASSWORD SECTION ─── -->
+      <div id="forgot-password-wrap" class="hidden" style="animation: cv-fade-in 0.3s ease;">
+        <button onclick="backToAuth()" style="background: none; border: none; color: var(--cv-white3); font-size: 0.85rem; cursor: pointer; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+          ← Back to login
+        </button>
+        <h2 style="font-family: var(--font-display); font-size: 1.4rem; font-weight: 800; margin-bottom: 0.5rem;">Reset Password 🔐</h2>
+        <p style="color: var(--cv-white2); font-size: 0.9rem; margin-bottom: 1.5rem;">
+          Enter your email and we'll send you a link to reset your password.
+        </p>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input class="form-input" id="forgot-email" type="email" placeholder="you@example.com">
+        </div>
+        <div class="modal-error" id="forgot-error" style="display: none; margin-bottom: 1rem;"></div>
+        <div class="modal-success" id="forgot-success" style="display: none; padding: 1rem; background: rgba(125,216,125,0.1); border: 1px solid rgba(125,216,125,0.3); border-radius: 8px; margin-bottom: 1rem;">
+          <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">✉️</div>
+          <div style="color: var(--cv-green); font-weight: 600; margin-bottom: 0.25rem;">Check your email!</div>
+          <div style="font-size: 0.85rem; color: var(--cv-white2);">We've sent a password reset link to your email address.</div>
+        </div>
+        <button class="btn btn-primary w-full" id="forgot-submit-btn" onclick="handleForgotPassword()">
+          Send Reset Link →
         </button>
       </div>
     </div>
