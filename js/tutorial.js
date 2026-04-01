@@ -773,22 +773,15 @@ const originalOnAuthSuccess = window.onAuthSuccess;
 window.onAuthSuccess = function(isNew) {
   originalOnAuthSuccess(isNew);
   
-  // Show tutorial for new users or users who haven't completed it
-  if (isNew || shouldShowTutorial()) {
+  // Show tutorial ONLY for brand new signups (not logins)
+  if (isNew) {
     setTimeout(() => {
       startTutorial();
-    }, isNew ? 3500 : 500); // Wait for auth success animation if new
+    }, 3500); // Wait for auth success animation
   }
 };
 
-// Also check on page load for returning users who might have missed it
-document.addEventListener('DOMContentLoaded', () => {
-  if (State.currentUser && shouldShowTutorial()) {
-    setTimeout(() => {
-      startTutorial();
-    }, 1000);
-  }
-});
+// Tutorial only shows on new account creation - no automatic showing for returning users
 
 // Export for manual triggering
 window.startTutorial = startTutorial;

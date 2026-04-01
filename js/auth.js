@@ -12,6 +12,12 @@ function openAuth() {
   document.getElementById('forgot-password-wrap').classList.add('hidden');
   document.getElementById('forgot-success').style.display = 'none';
   document.getElementById('forgot-error').style.display = 'none';
+  
+  // Show/hide forgot password link based on current mode
+  const forgotPasswordLink = document.getElementById('forgot-password-link');
+  if (forgotPasswordLink) {
+    forgotPasswordLink.style.display = State.authMode === 'login' ? '' : 'none';
+  }
 }
 
 function closeAuth() {
@@ -39,6 +45,12 @@ function switchTab(mode) {
   document.getElementById('age-check-wrap').style.display  = isSignup ? '' : 'none';
   document.getElementById('auth-disclaimer').style.display = isSignup ? '' : 'none';
   document.getElementById('auth-error').style.display      = 'none';
+  
+  // Show/hide forgot password link based on mode
+  const forgotPasswordLink = document.getElementById('forgot-password-link');
+  if (forgotPasswordLink) {
+    forgotPasswordLink.style.display = isSignup ? 'none' : '';
+  }
 
   document.getElementById('auth-submit-btn').textContent =
     isSignup ? 'Create Account & Get 1000 Tokens' : 'Log In';
@@ -261,18 +273,25 @@ async function handleForgotPassword() {
     await new Promise(r => setTimeout(r, 1000));
     successEl.style.display = '';
     btn.disabled = false;
-    btn.textContent = 'Send Reset Link →';
+    btn.textContent = 'Email Sent!';
     return;
   }
   
   try {
-    await auth.sendPasswordResetEmail(email);
+    // Configure action code settings with the current URL
+    const actionCodeSettings = {
+      url: window.location.origin + window.location.pathname,
+      handleCodeInApp: false
+    };
+    
+    await auth.sendPasswordResetEmail(email, actionCodeSettings);
     successEl.style.display = '';
     btn.textContent = 'Email Sent!';
     
     // Also show toast
     showToast('Password reset email sent! Check your inbox 📧', 'green');
   } catch (e) {
+    console.error('Password reset error:', e);
     let msg = 'Failed to send reset email. Please try again.';
     if (e.code === 'auth/user-not-found') {
       // For security, don't reveal if email exists or not
@@ -285,6 +304,7 @@ async function handleForgotPassword() {
     }
     if (e.code === 'auth/invalid-email') msg = 'Please enter a valid email address.';
     if (e.code === 'auth/too-many-requests') msg = 'Too many attempts. Please try again later.';
+    if (e.code === 'auth/network-request-failed') msg = 'Network error. Please check your connection.';
     
     errorEl.textContent = msg;
     errorEl.style.display = '';
