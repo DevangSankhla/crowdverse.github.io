@@ -24,6 +24,10 @@ const State = {
   userChallenges:    {},     // { challengeId: { current, completed, completedAt } }
   userShares:        0,
   lastPredictionDate: null,
+  
+  // Tutorial
+  tutorialCompleted: false,
+  tutorialVersion:   null,
 };
 
 // ── No sample markets - all data comes from Firestore ─────────────────

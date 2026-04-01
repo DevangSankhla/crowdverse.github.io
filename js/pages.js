@@ -768,6 +768,9 @@ function buildProfilePage() {
             </div>
             <div class="weekly-note"><img src="assets/Token.png" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;">+200 tokens every Monday</div>
             <div class="divider"></div>
+            <button class="btn btn-ghost w-full" onclick="startTutorial()" style="margin-bottom: 0.5rem;">
+              🎓 Replay Tutorial
+            </button>
             <button class="btn btn-ghost w-full" onclick="handleLogout()">Log Out</button>
           </div>
         </div>
