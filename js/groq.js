@@ -175,7 +175,7 @@ function showAttentionOverlay(optLabel, totalAmount, potentialWin) {
 
       <label id="attention-label"
              style="display:flex;align-items:flex-start;gap:0.75rem;padding:1rem;
-                    background:rgba(127,255,127,0.04);border:1px solid rgba(127,255,127,0.15);
+                    background:var(--green-glow2);border:1px solid var(--green-glow);
                     border-radius:10px;cursor:pointer;margin-bottom:1.25rem;
                     transition:border-color 0.2s;">
         <input type="checkbox" id="attention-check"
@@ -246,8 +246,8 @@ function showAttentionOverlay(optLabel, totalAmount, potentialWin) {
     #groq-context-panel {
       margin: 0 1.5rem;
       padding: 0.9rem 1rem;
-      background: rgba(127,255,127,0.035);
-      border: 1px solid rgba(127,255,127,0.12);
+      background: var(--green-glow2);
+      border: 1px solid var(--green-glow);
       border-radius: 10px;
     }
     .groq-skeleton {

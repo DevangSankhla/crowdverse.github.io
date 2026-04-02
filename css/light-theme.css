@@ -1,0 +1,426 @@
+/* ─────────────────────────────────────────────
+   light-theme.css — Light mode overrides
+   ───────────────────────────────────────────── */
+
+[data-theme="light"] {
+  /* Core palette */
+  --black:       #FAFAF8;
+  --off-black:   #FFFFFF;
+  --dark:        #F5F5F3;
+  --dark2:       #EDEDEA;
+  --border:      #E5E5E0;
+  --border2:     #D5D5D0;
+
+  --green:       #4A9E4A;
+  --green-dim:   #3A7A3A;
+  --green-glow:  rgba(74, 158, 74, 0.1);
+  --green-glow2: rgba(74, 158, 74, 0.06);
+
+  --white:       #1A1A1A;
+  --white1:      #E8E8E5;
+  --white2:      #555555;
+  --white3:      #888888;
+
+  --red:         #D9534F;
+  --yellow:      #B8860B;
+
+  /* CV palette */
+  --cv-black:       #FAFAF8;
+  --cv-off-black:   #FFFFFF;
+  --cv-dark:        #F5F5F3;
+  --cv-dark2:       #EDEDEA;
+  --cv-border:      #E5E5E0;
+  --cv-border2:     #D5D5D0;
+  --cv-green:       #4A9E4A;
+  --cv-green-light: #7DD87D;
+  --cv-green-dim:   #3A7A3A;
+  --cv-green-glow:  rgba(74, 158, 74, 0.1);
+  --cv-green-glow2: rgba(74, 158, 74, 0.06);
+  --cv-red:         #D9534F;
+  --cv-red-dim:     #A94442;
+  --cv-red-glow:    rgba(217, 83, 79, 0.1);
+  --cv-white:       #1A1A1A;
+  --cv-white1:      #E8E8E5;
+  --cv-white2:      #555555;
+  --cv-white3:      #888888;
+  --cv-yellow:      #B8860B;
+  --cv-blue:        #4A7FD4;
+  --cv-purple:      #8B6FC7;
+
+  --cv-gradient-card: linear-gradient(180deg, #F5F5F3 0%, #FFFFFF 100%);
+  --cv-shadow-sm:  0 2px 8px rgba(0,0,0,0.08);
+  --cv-shadow-md:  0 4px 16px rgba(0,0,0,0.1);
+  --cv-shadow-glow: 0 0 30px rgba(74, 158, 74, 0.1);
+}
+
+[data-theme="light"] body {
+  --black: #FAFAF8;
+  --off-black: #FFFFFF;
+  --dark: #F5F5F3;
+  --dark2: #EDEDEA;
+  --border: #E5E5E0;
+  --border2: #D5D5D0;
+  --green: #4A9E4A;
+  --green-dim: #3A7A3A;
+  --green-glow: rgba(74, 158, 74, 0.1);
+  --green-glow2: rgba(74, 158, 74, 0.06);
+  --red: #D9534F;
+  --yellow: #B8860B;
+  --white: #1A1A1A;
+  --white1: #E8E8E5;
+  --white2: #555555;
+  --white3: #888888;
+}
+
+/* ── Overlays ── */
+[data-theme="light"] .modal-overlay {
+  background: rgba(120, 120, 120, 0.35);
+}
+
+[data-theme="light"] .modal-overlay-v2 {
+  background: rgba(120, 120, 120, 0.25);
+}
+
+[data-theme="light"] .safety-popup {
+  background: rgba(100, 100, 100, 0.25);
+}
+
+[data-theme="light"] #attention-overlay {
+  background: rgba(255, 255, 255, 0.98) !important;
+}
+
+/* ── Navbar ── */
+[data-theme="light"] .navbar {
+  background: rgba(255, 255, 255, 0.92);
+  border-bottom-color: var(--border);
+}
+
+[data-theme="light"] .nav-logo-img {
+  filter: drop-shadow(0 0 6px rgba(74, 158, 74, 0.25));
+}
+
+[data-theme="light"] .nav-link:hover {
+  background: var(--dark2);
+}
+
+[data-theme="light"] .nav-link.active {
+  background: rgba(74, 158, 74, 0.08);
+}
+
+[data-theme="light"] .token-badge {
+  background: var(--dark2);
+}
+
+/* ── Mobile nav ── */
+[data-theme="light"] #mobile-nav {
+  background: rgba(255, 255, 255, 0.97);
+  border-top-color: var(--border);
+}
+
+/* ── Scrollbar ── */
+[data-theme="light"] ::-webkit-scrollbar-track {
+  background: var(--black);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: var(--green-dim);
+}
+
+/* ── Toast ── */
+[data-theme="light"] .toast.red {
+  border-color: rgba(217, 83, 79, 0.3);
+  color: #D9534F;
+}
+
+/* ── Buttons ── */
+[data-theme="light"] .btn-primary:hover:not(:disabled) {
+  box-shadow: 0 4px 15px rgba(74, 158, 74, 0.25);
+}
+
+[data-theme="light"] .btn-primary:hover {
+  box-shadow: 0 0 20px rgba(74, 158, 74, 0.25);
+}
+
+[data-theme="light"] .btn-ghost:hover:not(:disabled) {
+  background: var(--dark2);
+  border-color: var(--white3);
+}
+
+[data-theme="light"] .read-btn:hover {
+  background: var(--green);
+  border-color: var(--green);
+  color: #FFFFFF;
+}
+
+/* ── Hero ── */
+[data-theme="light"] .hero::before {
+  background: radial-gradient(ellipse at center, rgba(74, 158, 74, 0.06) 0%, transparent 70%);
+}
+
+[data-theme="light"] .hero-logo {
+  filter: drop-shadow(0 0 30px rgba(74, 158, 74, 0.2));
+}
+
+[data-theme="light"] .hero-badge {
+  background: var(--cv-green-glow2);
+  border-color: rgba(74, 158, 74, 0.2);
+}
+
+/* ── Market cards ── */
+[data-theme="light"] .market-card:hover {
+  border-color: rgba(74, 158, 74, 0.3);
+  background: var(--dark);
+}
+
+[data-theme="light"] .market-card-full:hover {
+  border-color: rgba(74, 158, 74, 0.2);
+}
+
+[data-theme="light"] .odds-fill {
+  box-shadow: 0 0 8px rgba(74, 158, 74, 0.3);
+}
+
+/* ── Vote buttons ── */
+[data-theme="light"] .vote-yes:hover {
+  box-shadow: 0 0 15px rgba(74, 158, 74, 0.12);
+}
+
+[data-theme="light"] .vote-option.yes:hover,
+[data-theme="light"] .vote-option.yes.selected {
+  background: rgba(127, 255, 127, 0.08);
+  border-color: var(--green);
+  color: var(--green);
+}
+
+[data-theme="light"] .vote-option.no:hover,
+[data-theme="light"] .vote-option.no.selected {
+  background: rgba(224, 80, 80, 0.08);
+  border-color: #ff8888;
+  color: #ff8888;
+}
+
+/* ── Notice / Warning ── */
+[data-theme="light"] .notice-box {
+  background: rgba(217, 83, 79, 0.06);
+  border-color: rgba(217, 83, 79, 0.2);
+  color: #D9534F;
+}
+
+[data-theme="light"] .no-political {
+  background: rgba(184, 134, 11, 0.05);
+  border-color: rgba(184, 134, 11, 0.2);
+  color: #555555;
+}
+
+[data-theme="light"] .legal-banner {
+  background: rgba(184, 134, 11, 0.04);
+  border-color: rgba(184, 134, 11, 0.2);
+}
+
+[data-theme="light"] .legal-banner p {
+  color: #555555;
+}
+
+[data-theme="light"] .legal-banner strong {
+  color: var(--yellow);
+}
+
+/* ── Modal ── */
+[data-theme="light"] .modal-error {
+  background: rgba(217, 83, 79, 0.08);
+  border-color: rgba(217, 83, 79, 0.25);
+  color: #D9534F;
+}
+
+[data-theme="light"] .age-check {
+  background: rgba(74, 158, 74, 0.05);
+  border-color: rgba(74, 158, 74, 0.15);
+}
+
+[data-theme="light"] .tokens-granted {
+  background: rgba(74, 158, 74, 0.08);
+  border-color: rgba(74, 158, 74, 0.2);
+}
+
+[data-theme="light"] .modal-success .check {
+  color: var(--green);
+}
+
+/* ── Profile ── */
+[data-theme="light"] .token-display .amount {
+  text-shadow: 0 0 20px rgba(74, 158, 74, 0.15);
+}
+
+[data-theme="light"] .profile-avatar {
+  border-color: rgba(74, 158, 74, 0.25);
+}
+
+/* ── Prediction history ── */
+[data-theme="light"] .pred-win {
+  background: rgba(74, 158, 74, 0.1);
+  color: var(--green);
+}
+
+[data-theme="light"] .pred-lose {
+  background: rgba(217, 83, 79, 0.1);
+  color: #D9534F;
+}
+
+[data-theme="light"] .pred-pending {
+  background: rgba(184, 134, 11, 0.08);
+  color: var(--yellow);
+}
+
+/* ── Leaderboard ranks ── */
+[data-theme="light"] .lb-rank.gold   { color: #B8860B; }
+[data-theme="light"] .lb-rank.silver { color: #666666; }
+[data-theme="light"] .lb-rank.bronze { color: #8B4513; }
+
+/* ── Form focus ── */
+[data-theme="light"] .form-input:focus,
+[data-theme="light"] .form-select:focus,
+[data-theme="light"] .form-textarea:focus {
+  border-color: rgba(74, 158, 74, 0.4);
+}
+
+/* ── Spinner ── */
+[data-theme="light"] .spinner {
+  border-color: rgba(0,0,0,0.1);
+  border-top-color: var(--black);
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   CROWDVERSE REDESIGN — Light mode
+   ═════════════════════════════════════════════════════════════════════════════ */
+
+[data-theme="light"] .market-card-v2:hover {
+  box-shadow: var(--cv-shadow-md), var(--cv-shadow-glow);
+}
+
+[data-theme="light"] .market-card-v2:hover .market-category-badge {
+  border-color: rgba(74, 158, 74, 0.3);
+  color: var(--cv-green);
+}
+
+[data-theme="light"] .market-live-indicator {
+  background: rgba(74, 158, 74, 0.08);
+  border-color: rgba(74, 158, 74, 0.2);
+}
+
+[data-theme="light"] .market-live-indicator::before {
+  box-shadow: 0 0 6px var(--cv-green);
+}
+
+[data-theme="light"] .market-predicted-badge {
+  background: var(--cv-green-glow);
+  border-color: rgba(74, 158, 74, 0.25);
+}
+
+[data-theme="light"] .vote-btn-v2.yes:hover {
+  background: rgba(74, 158, 74, 0.08);
+  border-color: rgba(74, 158, 74, 0.3);
+}
+
+[data-theme="light"] .vote-btn-v2.no:hover {
+  background: rgba(217, 83, 79, 0.08);
+  border-color: rgba(217, 83, 79, 0.3);
+}
+
+[data-theme="light"] .token-wallet {
+  background: linear-gradient(135deg, #EDEDEA 0%, #F5F5F3 100%);
+}
+
+[data-theme="light"] .token-wallet::before {
+  background: linear-gradient(90deg, transparent, rgba(74, 158, 74, 0.08), transparent);
+}
+
+[data-theme="light"] .token-wallet:hover {
+  box-shadow: 0 0 15px rgba(74, 158, 74, 0.08);
+}
+
+[data-theme="light"] .streak-counter {
+  background: linear-gradient(135deg, rgba(184, 134, 11, 0.08) 0%, rgba(184, 134, 11, 0.04) 100%);
+  border-color: rgba(184, 134, 11, 0.2);
+}
+
+[data-theme="light"] .streak-counter:hover {
+  box-shadow: 0 0 15px rgba(184, 134, 11, 0.1);
+}
+
+[data-theme="light"] .badge:hover .badge-icon {
+  box-shadow: 0 0 15px rgba(74, 158, 74, 0.12);
+}
+
+[data-theme="light"] .badge.unlocked {
+  background: var(--cv-green-glow);
+}
+
+[data-theme="light"] .success-checkmark {
+  background: var(--cv-green-glow);
+  border-color: var(--cv-green);
+}
+
+[data-theme="light"] .challenge-card.completed {
+  background: var(--cv-green-glow);
+}
+
+[data-theme="light"] .wizard-step-dot.active {
+  background: var(--cv-green);
+}
+
+[data-theme="light"] .wizard-step-dot.completed {
+  background: var(--cv-green-dim);
+}
+
+[data-theme="light"] .empty-state {
+  background: var(--cv-dark);
+  border-color: var(--cv-border2);
+}
+
+[data-theme="light"] .rewards-coming-top {
+  background: rgba(184, 134, 11, 0.05);
+  border-color: rgba(184, 134, 11, 0.18);
+}
+
+[data-theme="light"] .reward-tokens {
+  background: var(--cv-green-glow2);
+  border-color: rgba(74, 158, 74, 0.18);
+}
+
+[data-theme="light"] .countdown-timer {
+  background: rgba(184, 134, 11, 0.06);
+  border-color: rgba(184, 134, 11, 0.18);
+}
+
+[data-theme="light"] .countdown-timer.urgent {
+  background: rgba(217, 83, 79, 0.06);
+  border-color: rgba(217, 83, 79, 0.2);
+}
+
+[data-theme="light"] .coming-soon-badge {
+  border-color: rgba(74, 158, 74, 0.25);
+}
+
+[data-theme="light"] .collapsible-section {
+  background: var(--cv-dark);
+  border-color: var(--cv-border);
+}
+
+[data-theme="light"] .collapsible-header:hover {
+  background: var(--cv-dark2);
+}
+
+[data-theme="light"] .safety-popup-content {
+  background: var(--cv-dark);
+  border-color: var(--cv-border);
+}
+
+[data-theme="light"] .modal-v2 {
+  background: var(--cv-dark);
+  border-color: var(--cv-border);
+}
+
+[data-theme="light"] #groq-context-panel {
+  background: rgba(74, 158, 74, 0.04);
+  border-color: rgba(74, 158, 74, 0.12);
+}

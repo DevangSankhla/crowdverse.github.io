@@ -55,7 +55,7 @@ function showToast(message, color = 'green') {
   toast.className = 'toast-dynamic';
 
   const bg = color === 'green' ? 'var(--green)'
-           : color === 'red'   ? '#ff5555'
+           : color === 'red'   ? 'var(--red)'
            :                     'var(--yellow)';
 
   toast.style.cssText = `

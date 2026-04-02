@@ -213,10 +213,10 @@ function buildMobileNav() {
         position: fixed;
         bottom: 0; left: 0; right: 0;
         z-index: 999;
-        background: rgba(10,10,10,0.97);
+        background: var(--off-black);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
-        border-top: 1px solid #222;
+        border-top: 1px solid var(--border);
         padding: 0;
         height: 64px;
         grid-template-columns: repeat(5, 1fr);
@@ -233,7 +233,7 @@ function buildMobileNav() {
         border: none;
         cursor: pointer;
         transition: all 0.15s;
-        color: #555;
+        color: var(--white3);
         -webkit-tap-highlight-color: transparent;
         touch-action: manipulation;
       }

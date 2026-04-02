@@ -860,6 +860,9 @@ function buildProfilePage() {
             <button class="btn btn-ghost w-full" onclick="startTutorial()" style="margin-bottom: 0.5rem;">
               🎓 Replay Tutorial
             </button>
+            <button class="btn btn-ghost w-full" onclick="toggleTheme()" id="theme-toggle-btn" style="margin-bottom: 0.5rem;">
+              🌙 Dark Mode
+            </button>
             <button class="btn btn-ghost w-full" onclick="handleLogout()">Log Out</button>
           </div>
         </div>
@@ -1020,6 +1023,7 @@ async function renderProfile() {
   updateTokenDisplay();
   renderLeaderboard();
   updateProfileRank();
+  updateThemeToggleLabel();
 
   // Prediction history
   const histEl = document.getElementById('prediction-history');
