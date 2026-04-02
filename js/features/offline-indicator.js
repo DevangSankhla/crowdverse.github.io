@@ -1,16 +1,17 @@
 // ─────────────────────────────────────────────────────────────────────
-// offline-indicator.js — Offline mode indicator
+// offline-indicator.js — Offline mode indicator (simplified)
 // ─────────────────────────────────────────────────────────────────────
 
 const OfflineManager = {
-  isOnline: navigator.onLine,
+  isOnline: true,
   indicator: null,
-  manuallyDismissed: false,
+  hidden: false,
 
   init() {
     this.createIndicator();
-    this.bindEvents();
-    this.updateStatus();
+    // Don't auto-check, only show if explicitly offline
+    window.addEventListener('offline', () => this.show());
+    window.addEventListener('online', () => this.hide());
   },
 
   createIndicator() {
@@ -38,8 +39,8 @@ const OfflineManager = {
     `;
     this.indicator.innerHTML = `
       <span>📡</span>
-      <span>You're offline</span>
-      <button id="offline-dismiss" style="
+      <span>Connection issue detected</span>
+      <button onclick="OfflineManager.hideForever()" style="
         background: rgba(0,0,0,0.2);
         border: none;
         border-radius: 4px;
@@ -48,55 +49,39 @@ const OfflineManager = {
         cursor: pointer;
         font-size: 0.7rem;
         color: var(--black);
-      ">✕</button>
+      ">✕ Hide</button>
     `;
     document.body.appendChild(this.indicator);
-    
-    // Dismiss button
-    this.indicator.querySelector('#offline-dismiss').onclick = () => {
-      this.manuallyDismissed = true;
-      this.indicator.style.transform = 'translateY(-100%)';
-    };
   },
 
-  bindEvents() {
-    window.addEventListener('online', () => {
-      this.isOnline = true;
-      this.manuallyDismissed = false;
-      this.updateStatus();
-      showToast('🌐 Back online!', 'green');
-    });
-
-    window.addEventListener('offline', () => {
-      this.isOnline = false;
-      this.manuallyDismissed = false;
-      this.updateStatus();
-      showToast('📡 You\'re offline', 'yellow');
-    });
+  show() {
+    if (this.hidden || !this.indicator) return;
+    this.indicator.style.transform = 'translateY(0)';
   },
 
-  updateStatus() {
-    if (!this.indicator) return;
-    
-    if (this.isOnline || this.manuallyDismissed) {
+  hide() {
+    if (this.indicator) {
       this.indicator.style.transform = 'translateY(-100%)';
-    } else {
-      this.indicator.style.transform = 'translateY(0)';
     }
+    this.isOnline = true;
   },
 
-  // Check current status
-  checkNow() {
-    this.isOnline = navigator.onLine;
-    this.updateStatus();
-    return this.isOnline;
+  hideForever() {
+    this.hidden = true;
+    this.hide();
+    localStorage.setItem('offline-banner-hidden', 'true');
+  },
+
+  restore() {
+    this.hidden = localStorage.getItem('offline-banner-hidden') === 'true';
   }
 };
 
-// Initialize on load
+// Initialize
 document.addEventListener('DOMContentLoaded', () => {
+  OfflineManager.restore();
   OfflineManager.init();
   
-  // Expose for debugging
-  window.checkConnection = () => OfflineManager.checkNow();
+  // Expose global function
+  window.hideOfflineBanner = () => OfflineManager.hideForever();
 });
