@@ -261,6 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
   buildAdminPage();
   buildMobileNav();
   initModalBackdropClose();
+  if (typeof startLeaderboardListener === 'function') startLeaderboardListener();
 
   if (!handleDeepLink()) {
     showPage('home');

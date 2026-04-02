@@ -808,10 +808,11 @@ async function resolveMarket(docId, winningOption) {
         const winnings = Math.floor(proportion * totalLosingStake);
         const totalPayout = userStake + winnings; // Return stake + winnings
 
-        // Update user's tokens
+        // Update user's tokens and total winnings
         const userRef = db.collection('users').doc(vote.userId);
         batch.update(userRef, {
-          tokens: firebase.firestore.FieldValue.increment(totalPayout)
+          tokens: firebase.firestore.FieldValue.increment(totalPayout),
+          winnings: firebase.firestore.FieldValue.increment(winnings)
         });
 
         // Update prediction status to 'won'

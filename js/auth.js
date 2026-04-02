@@ -180,6 +180,10 @@ async function handleLogout() {
     });
     _marketVotesUnsubscribe = {};
   }
+  if (typeof _leaderboardUnsubscribe === 'function') {
+    _leaderboardUnsubscribe();
+    _leaderboardUnsubscribe = null;
+  }
   
   State.currentUser     = null;
   State.userTokens      = 0;
@@ -355,6 +359,8 @@ if (!demoMode && typeof auth !== 'undefined') {
       updateNavForAuth();
       updateTokenDisplay();
       updateHeroCta();
+      if (typeof renderLeaderboard === 'function') renderLeaderboard();
+      if (typeof updateProfileRank === 'function') updateProfileRank();
       
       // Update admin link visibility
       const adminLink = document.getElementById('admin-nav-link');
@@ -369,6 +375,7 @@ if (!demoMode && typeof auth !== 'undefined') {
       if (typeof checkWeeklyBonus       === 'function') checkWeeklyBonus();
       // Start markets listener immediately on auth so markets are ready
       if (typeof startMarketsListener   === 'function') startMarketsListener();
+      if (typeof startLeaderboardListener === 'function') startLeaderboardListener();
     } else {
       console.log('Auth state: User logged out');
       State.currentUser = null;

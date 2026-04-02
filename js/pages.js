@@ -5,6 +5,95 @@
 // Market submission cost in tokens
 const MARKET_SUBMISSION_COST = 20;
 
+// ── Real-time leaderboard ─────────────────────────────────────────────
+let _leaderboardUnsubscribe = null;
+let _leaderboardData = []; // Array of { uid, displayName, email, winnings, tokens }
+
+function startLeaderboardListener() {
+  if (demoMode || !db) return;
+  if (_leaderboardUnsubscribe) _leaderboardUnsubscribe();
+
+  _leaderboardUnsubscribe = db.collection('users')
+    .onSnapshot(snapshot => {
+      const users = [];
+      snapshot.forEach(doc => {
+        const d = doc.data();
+        users.push({
+          uid: doc.id,
+          displayName: d.displayName,
+          email: d.email,
+          tokens: d.tokens || 0,
+          winnings: d.winnings || 0
+        });
+      });
+      // Exclude admin from leaderboard
+      _leaderboardData = users.filter(u => u.email !== 'founder@crowdverse.in');
+      renderLeaderboard();
+      updateProfileRank();
+    }, err => {
+      console.warn('Leaderboard listener error:', err);
+    });
+}
+
+function renderLeaderboard() {
+  const container = document.getElementById('leaderboard-list');
+  if (!container) return;
+
+  // Sort by winnings descending
+  const sorted = [..._leaderboardData].sort((a, b) => (b.winnings || 0) - (a.winnings || 0));
+
+  if (sorted.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:2rem;color:var(--white3);font-family:var(--font-mono);font-size:0.8rem;">
+        Leaderboard will appear as users start winning…
+      </div>`;
+    return;
+  }
+
+  const rankClass = i => i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+
+  const topUsers = sorted.slice(0, 5).map((u, i) => {
+    const isYou = u.uid === State.currentUser?.uid;
+    return `
+      <div class="leaderboard-item" style="${isYou ? 'background:rgba(127,255,127,0.05);' : ''}">
+        <span class="lb-rank ${rankClass(i)}">#${i + 1}</span>
+        <span class="lb-name ${isYou ? 'you' : ''}">${escHtml(u.displayName || u.email?.split('@')[0] || 'User')}${isYou ? ' (You)' : ''}</span>
+        <span class="lb-score">${(u.winnings || 0).toLocaleString()} won</span>
+      </div>
+    `;
+  }).join('');
+
+  // If current user is not in top 5, show their row separately
+  const currentUserIdx = sorted.findIndex(u => u.uid === State.currentUser?.uid);
+  const showYourRow = State.currentUser && currentUserIdx > 4;
+
+  container.innerHTML = topUsers + `
+    <div class="leaderboard-item" id="your-lb-row" style="${showYourRow ? '' : 'display:none;'}margin-top:0.5rem;border-top:1px solid var(--border);padding-top:0.5rem;">
+      <span class="lb-rank" id="your-lb-rank">${showYourRow ? '#' + (currentUserIdx + 1) : '—'}</span>
+      <span class="lb-name you" id="your-lb-name">${escHtml(State.currentUser?.displayName || State.currentUser?.email?.split('@')[0] || 'You')} (You)</span>
+      <span class="lb-score" id="your-lb-score">${showYourRow ? (sorted[currentUserIdx]?.winnings || 0).toLocaleString() + ' won' : '—'}</span>
+    </div>
+  `;
+}
+
+function updateProfileRank() {
+  if (!State.currentUser) return;
+  const sorted = [..._leaderboardData].sort((a, b) => (b.winnings || 0) - (a.winnings || 0));
+  const rank = sorted.findIndex(u => u.uid === State.currentUser.uid);
+  const rankEl = document.getElementById('stat-rank');
+  if (rankEl) rankEl.textContent = rank >= 0 ? '#' + (rank + 1) : '#—';
+
+  // Also update the "your row" in leaderboard if it exists
+  const yourRow = document.getElementById('your-lb-row');
+  const yourRank = document.getElementById('your-lb-rank');
+  const yourScore = document.getElementById('your-lb-score');
+  if (yourRow && rank > 4) {
+    yourRow.style.display = '';
+    if (yourRank) yourRank.textContent = '#' + (rank + 1);
+    if (yourScore) yourScore.textContent = (sorted[rank]?.winnings || 0).toLocaleString() + ' won';
+  }
+}
+
 // ── HOME PAGE ────────────────────────────────────────────────────────
 function buildHomePage() {
   document.getElementById('page-home').innerHTML = `
@@ -798,41 +887,9 @@ function buildProfilePage() {
           <div class="stat-box">
             <h3><span class="icon">🏆</span> Leaderboard</h3>
             <div id="leaderboard-list">
-              ${(function() {
-                // Get all users from admin cache or create simple leaderboard
-                let users = [];
-                if (typeof _adminUsersCache !== 'undefined' && _adminUsersCache.length > 0) {
-                  users = _adminUsersCache.filter(u => u.email !== 'founder@crowdverse.in');
-                }
-                
-                // If we have no users yet, show placeholder
-                if (users.length === 0) {
-                  return `<div style="text-align:center;padding:2rem;color:var(--white3);font-family:var(--font-mono);font-size:0.8rem;">
-                    Leaderboard will appear as more users join...
-                  </div>`;
-                }
-                
-                // Sort by tokens
-                users.sort((a, b) => (b.tokens || 0) - (a.tokens || 0));
-                
-                // Show top 5
-                return users.slice(0, 5).map((u, i) => {
-                  const isYou = u.uid === State.currentUser?.uid;
-                  return `
-                    <div class="leaderboard-item" style="${isYou ? 'background:rgba(127,255,127,0.05);' : ''}">
-                      <span class="lb-rank">#${i + 1}</span>
-                      <span class="lb-name ${isYou ? 'you' : ''}">${escHtml(u.displayName || u.email?.split('@')[0] || 'User')}${isYou ? ' (You)' : ''}</span>
-                      <span class="lb-score">${(u.tokens || 0).toLocaleString()}</span>
-                    </div>
-                  `;
-                }).join('') + `
-                  <div class="leaderboard-item" id="your-lb-row" style="display:none;margin-top:0.5rem;border-top:1px solid var(--border);padding-top:0.5rem;">
-                    <span class="lb-rank" id="your-lb-rank">—</span>
-                    <span class="lb-name you" id="your-lb-name">You</span>
-                    <span class="lb-score" id="your-lb-score">—</span>
-                  </div>
-                `;
-              })()}
+              <div style="text-align:center;padding:2rem;color:var(--white3);font-family:var(--font-mono);font-size:0.8rem;">
+                Loading leaderboard…
+              </div>
             </div>
           </div>
 
@@ -961,6 +1018,8 @@ async function renderProfile() {
   if (statPredEl) statPredEl.textContent = State.userPredictions.length;
 
   updateTokenDisplay();
+  renderLeaderboard();
+  updateProfileRank();
 
   // Prediction history
   const histEl = document.getElementById('prediction-history');
