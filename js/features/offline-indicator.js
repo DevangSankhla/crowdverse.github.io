@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────
-// offline-indicator.js — Offline mode indicator (simplified)
+// offline-indicator.js — Offline mode indicator
 // ─────────────────────────────────────────────────────────────────────
 
 const OfflineManager = {
@@ -9,9 +9,22 @@ const OfflineManager = {
 
   init() {
     this.createIndicator();
-    // Don't auto-check, only show if explicitly offline
-    window.addEventListener('offline', () => this.show());
-    window.addEventListener('online', () => this.hide());
+    this.bindEvents();
+    
+    // Check initial state
+    if (!navigator.onLine && !this.hidden) {
+      this.show();
+    }
+  },
+
+  bindEvents() {
+    window.addEventListener('offline', () => {
+      if (!this.hidden) this.show();
+    });
+    
+    window.addEventListener('online', () => {
+      this.hide();
+    });
   },
 
   createIndicator() {
@@ -36,21 +49,42 @@ const OfflineManager = {
       align-items: center;
       justify-content: center;
       gap: 0.5rem;
+      pointer-events: auto;
     `;
-    this.indicator.innerHTML = `
-      <span>📡</span>
-      <span>Connection issue detected</span>
-      <button onclick="OfflineManager.hideForever()" style="
-        background: rgba(0,0,0,0.2);
-        border: none;
-        border-radius: 4px;
-        padding: 0.15rem 0.5rem;
-        margin-left: 0.5rem;
-        cursor: pointer;
-        font-size: 0.7rem;
-        color: var(--black);
-      ">✕ Hide</button>
+    
+    // Create content with properly attached event handler
+    const content = document.createElement('span');
+    content.textContent = 'Connection issue detected';
+    
+    const icon = document.createElement('span');
+    icon.textContent = '📡';
+    
+    const hideBtn = document.createElement('button');
+    hideBtn.textContent = '✕ Hide';
+    hideBtn.style.cssText = `
+      background: rgba(0,0,0,0.2);
+      border: none;
+      border-radius: 4px;
+      padding: 0.25rem 0.75rem;
+      margin-left: 0.5rem;
+      cursor: pointer;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--black);
+      pointer-events: auto;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     `;
+    hideBtn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.hideForever();
+    };
+    
+    this.indicator.appendChild(icon);
+    this.indicator.appendChild(content);
+    this.indicator.appendChild(hideBtn);
+    
     document.body.appendChild(this.indicator);
   },
 
@@ -63,17 +97,23 @@ const OfflineManager = {
     if (this.indicator) {
       this.indicator.style.transform = 'translateY(-100%)';
     }
-    this.isOnline = true;
   },
 
   hideForever() {
     this.hidden = true;
     this.hide();
-    localStorage.setItem('offline-banner-hidden', 'true');
+    try {
+      localStorage.setItem('offline-banner-hidden', 'true');
+    } catch {}
+    showToast('Banner hidden', 'green');
   },
 
   restore() {
-    this.hidden = localStorage.getItem('offline-banner-hidden') === 'true';
+    try {
+      this.hidden = localStorage.getItem('offline-banner-hidden') === 'true';
+    } catch {
+      this.hidden = false;
+    }
   }
 };
 
@@ -82,6 +122,6 @@ document.addEventListener('DOMContentLoaded', () => {
   OfflineManager.restore();
   OfflineManager.init();
   
-  // Expose global function
+  // Expose for console use
   window.hideOfflineBanner = () => OfflineManager.hideForever();
 });
