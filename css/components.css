@@ -337,6 +337,8 @@
   width: 28px; height: 28px;
   border-radius: 50%;
   object-fit: cover;
+  background: var(--dark);
+  mix-blend-mode: normal;
 }
 .footer-brand-name {
   font-family: var(--font-display);
